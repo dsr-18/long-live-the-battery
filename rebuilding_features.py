@@ -71,6 +71,7 @@ def build_feature_df(batch_dict):
     n_cells = len(batch_dict.keys())
 
     ## Initializing feature vectors:
+    cycle_life = np.zeros(n_cells)
     # 1. delta_Q_100_10(V)
     minimum_dQ_100_10 = np.zeros(n_cells)
     variance_dQ_100_10 = np.zeros(n_cells)
@@ -89,6 +90,8 @@ def build_feature_df(batch_dict):
     diff_IR_100_2 = np.zeros(n_cells)  # Internal resistance, difference between cycle 100 and cycle 2
 
     for i, cell in enumerate(batch_dict.values()):
+        cycle_life[i] = cell['cycle_life']
+
         # 1. delta_Q_100_10(V)    
         c10 = cell['cycles']['10']
         c100 = cell['cycles']['100']
@@ -129,6 +132,7 @@ def build_feature_df(batch_dict):
         "mean_charge_time": mean_charge_time,
         "minimun_IR": minimun_IR,
         "diff_IR_100_2": diff_IR_100_2,
+        "cycle_life": cycle_life,
     })
 
     print("Done building features")
