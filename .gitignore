@@ -1,0 +1,13 @@
+#ignore data folder
+Data/
+
+#ignore Matlab files
+*.asv
+
+#ignore jupyter notebook files
+.ipynb_checkpoints/
+__pycache__/
+
+# ignore ide
+.idea
+.vscode/*
