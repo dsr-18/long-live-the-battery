@@ -143,5 +143,5 @@ if __name__ == "__main__":
     features_df = build_feature_df(all_batches_dict)
 
     save_csv_path = Path("Data/rebuild_features.csv")
-    features_df.to_csv(save_csv_path)
+    features_df.to_csv(save_csv_path, index=False)
     print("Saved features to ", save_csv_path)
