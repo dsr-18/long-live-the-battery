@@ -6,8 +6,15 @@ from pathlib import Path
 from sklearn.linear_model import LinearRegression
 
 
-def load_batches_to_dict():
-    """Loads all batches from disc and returns one concatenated dict"""
+def load_batches_to_dict(amount_to_load=3):
+    """Loads batches from disc and returns one concatenated dict.
+    amount_to_load specifies the number of batches to load, starting from 1."""
+
+    if amount_to_load < 1 or amount_to_load > 3:
+        raise "amount_to_load is not a valid number! Try a number between 1 and 3."
+
+    batches_dict = {}  # Initializing
+
     # Replicating Load Data logic
     print("Loading batch1 ...")
     path1 = Path("Data/batch1.pkl")
@@ -20,47 +27,55 @@ def load_batches_to_dict():
     del batch1['b1c13']
     del batch1['b1c22']
 
-    print("Loading batch2 ...")
-    path2 = Path("Data/batch2.pkl")
-    batch2 = pickle.load(open(path2, 'rb'))
+    batches_dict.update(batch1)
 
-    # There are four cells from batch1 that carried into batch2, we'll remove the data from batch2
-    # and put it with the correct cell from batch1
-    batch2_keys = ['b2c7', 'b2c8', 'b2c9', 'b2c15', 'b2c16']
-    batch1_keys = ['b1c0', 'b1c1', 'b1c2', 'b1c3', 'b1c4']
-    add_len = [662, 981, 1060, 208, 482]
+    if amount_to_load > 1:
+        print("Loading batch2 ...")
+        path2 = Path("Data/batch2.pkl")
+        batch2 = pickle.load(open(path2, 'rb'))
 
-    for i, bk in enumerate(batch1_keys):
-        batch1[bk]['cycle_life'] = batch1[bk]['cycle_life'] + add_len[i]
-        for j in batch1[bk]['summary'].keys():
-            if j == 'cycle':
-                batch1[bk]['summary'][j] = np.hstack((batch1[bk]['summary'][j], batch2[batch2_keys[i]]['summary'][j] + len(batch1[bk]['summary'][j])))
-            else:
-                batch1[bk]['summary'][j] = np.hstack((batch1[bk]['summary'][j], batch2[batch2_keys[i]]['summary'][j]))
-        last_cycle = len(batch1[bk]['cycles'].keys())
-        for j, jk in enumerate(batch2[batch2_keys[i]]['cycles'].keys()):
-            batch1[bk]['cycles'][str(last_cycle + j)] = batch2[batch2_keys[i]]['cycles'][jk]
-    
-    del batch2['b2c7']
-    del batch2['b2c8']
-    del batch2['b2c9']
-    del batch2['b2c15']
-    del batch2['b2c16']
+        # There are four cells from batch1 that carried into batch2, we'll remove the data from batch2
+        # and put it with the correct cell from batch1
+        batch2_keys = ['b2c7', 'b2c8', 'b2c9', 'b2c15', 'b2c16']
+        batch1_keys = ['b1c0', 'b1c1', 'b1c2', 'b1c3', 'b1c4']
+        add_len = [662, 981, 1060, 208, 482]
 
-    print("Loading batch3 ...")
-    path3 = Path("Data/batch3.pkl")
-    batch3 = pickle.load(open(path3, 'rb'))
+        for i, bk in enumerate(batch1_keys):
+            batch1[bk]['cycle_life'] = batch1[bk]['cycle_life'] + add_len[i]
+            for j in batch1[bk]['summary'].keys():
+                if j == 'cycle':
+                    batch1[bk]['summary'][j] = np.hstack((batch1[bk]['summary'][j], batch2[batch2_keys[i]]['summary'][j] + len(batch1[bk]['summary'][j])))
+                else:
+                    batch1[bk]['summary'][j] = np.hstack((batch1[bk]['summary'][j], batch2[batch2_keys[i]]['summary'][j]))
+            last_cycle = len(batch1[bk]['cycles'].keys())
+            for j, jk in enumerate(batch2[batch2_keys[i]]['cycles'].keys()):
+                batch1[bk]['cycles'][str(last_cycle + j)] = batch2[batch2_keys[i]]['cycles'][jk]
+        
+        del batch2['b2c7']
+        del batch2['b2c8']
+        del batch2['b2c9']
+        del batch2['b2c15']
+        del batch2['b2c16']
 
-    # remove noisy channels from batch3
-    del batch3['b3c37']
-    del batch3['b3c2']
-    del batch3['b3c23']
-    del batch3['b3c32']
-    del batch3['b3c38']
-    del batch3['b3c39']
+        batches_dict.update(batch2)
+
+    if amount_to_load > 2:
+        print("Loading batch3 ...")
+        path3 = Path("Data/batch3.pkl")
+        batch3 = pickle.load(open(path3, 'rb'))
+
+        # remove noisy channels from batch3
+        del batch3['b3c37']
+        del batch3['b3c2']
+        del batch3['b3c23']
+        del batch3['b3c32']
+        del batch3['b3c38']
+        del batch3['b3c39']
+
+        batches_dict.update(batch3)
 
     print("Done loading batches")
-    return {**batch1, **batch2, **batch3}
+    return batches_dict
 
 
 def build_feature_df(batch_dict):
