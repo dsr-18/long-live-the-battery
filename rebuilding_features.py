@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import skew, kurtosis
-import matplotlib.pyplot as plt
 import pickle
 from pathlib import Path
 from sklearn.linear_model import LinearRegression
@@ -85,8 +84,8 @@ def build_feature_df(batch_dict):
     diff_discharge_capacity_max_2 = np.zeros(n_cells)  # Difference between max discharge capacity and cycle 2
 
     # 3. Other features
-    mean_charge_time = np.zeros(n_cells)  # Average charge time, first 5 cycles
-    minimun_IR = np.zeros(n_cells)  # Minimum internal resistance, difference between cycle 100 and cycle 2
+    mean_charge_time_2_6 = np.zeros(n_cells)  # Average charge time, cycle 2 to 6
+    minimum_IR_2_100 = np.zeros(n_cells)  # Minimum internal resistance
     diff_IR_100_2 = np.zeros(n_cells)  # Internal resistance, difference between cycle 100 and cycle 2
 
     for i, cell in enumerate(batch_dict.values()):
@@ -115,8 +114,8 @@ def build_feature_df(batch_dict):
         diff_discharge_capacity_max_2[i] = np.max(q) - q[0][0]
         
         # 3. Other features
-        mean_charge_time[i] = np.mean(cell['summary']['chargetime'][1:6])
-        minimun_IR[i] = np.min(cell['summary']['IR'][1:100])
+        mean_charge_time_2_6[i] = np.mean(cell['summary']['chargetime'][1:6])
+        minimum_IR_2_100[i] = np.min(cell['summary']['IR'][1:100])
         diff_IR_100_2[i] = cell['summary']['IR'][100] - cell['summary']['IR'][1]
 
     features_df = pd.DataFrame({
@@ -129,8 +128,8 @@ def build_feature_df(batch_dict):
         "intercept_lin_fit_2_100": intercept_lin_fit_2_100,
         "discharge_capacity_2": discharge_capacity_2,
         "diff_discharge_capacity_max_2": diff_discharge_capacity_max_2,
-        "mean_charge_time": mean_charge_time,
-        "minimun_IR": minimun_IR,
+        "mean_charge_time_2_6": mean_charge_time_2_6,
+        "minimum_IR_2_100": minimum_IR_2_100,
         "diff_IR_100_2": diff_IR_100_2,
         "cycle_life": cycle_life,
     })
