@@ -101,7 +101,12 @@ def build_feature_df(batch_dict):
     # 3. Other features
     mean_charge_time_2_6 = np.zeros(n_cells)  # Average charge time, cycle 2 to 6
     minimum_IR_2_100 = np.zeros(n_cells)  # Minimum internal resistance
+    # I skipped the tempererature integreal because i have no idea what it means.
     diff_IR_100_2 = np.zeros(n_cells)  # Internal resistance, difference between cycle 100 and cycle 2
+
+    # Classifier features
+    minimum_dQ_5_4 = np.zeros(n_cells)
+    variance_dQ_5_4 = np.zeros(n_cells)
 
     for i, cell in enumerate(batch_dict.values()):
         cycle_life[i] = cell['cycle_life']
@@ -133,6 +138,13 @@ def build_feature_df(batch_dict):
         minimum_IR_2_100[i] = np.min(cell['summary']['IR'][1:100])
         diff_IR_100_2[i] = cell['summary']['IR'][100] - cell['summary']['IR'][1]
 
+        # Classifier features
+        c4 = cell['cycles']['4']
+        c5 = cell['cycles']['5']
+        dQ_5_4 = c5['Qdlin'] - c4['Qdlin']
+        minimum_dQ_5_4[i] = np.log(np.abs(np.min(dQ_5_4)))
+        variance_dQ_5_4[i] = np.log(np.var(dQ_5_4))
+
     features_df = pd.DataFrame({
         "cell_key": np.array(list(batch_dict.keys())),
         "minimum_dQ_100_10": minimum_dQ_100_10,
@@ -146,6 +158,8 @@ def build_feature_df(batch_dict):
         "mean_charge_time_2_6": mean_charge_time_2_6,
         "minimum_IR_2_100": minimum_IR_2_100,
         "diff_IR_100_2": diff_IR_100_2,
+        "minimum_dQ_5_4": minimum_dQ_5_4,
+        "variance_dQ_5_4": variance_dQ_5_4,
         "cycle_life": cycle_life,
     })
 
