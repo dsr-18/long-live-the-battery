@@ -107,6 +107,7 @@ def build_feature_df(batch_dict):
     # Classifier features
     minimum_dQ_5_4 = np.zeros(n_cells)
     variance_dQ_5_4 = np.zeros(n_cells)
+    cycle_550_clf = np.zeros(n_cells)
 
     for i, cell in enumerate(batch_dict.values()):
         cycle_life[i] = cell['cycle_life']
@@ -144,6 +145,8 @@ def build_feature_df(batch_dict):
         dQ_5_4 = c5['Qdlin'] - c4['Qdlin']
         minimum_dQ_5_4[i] = np.log(np.abs(np.min(dQ_5_4)))
         variance_dQ_5_4[i] = np.log(np.var(dQ_5_4))
+        cycle_550_clf[i] = cell['cycle_life'] >= 550
+        
 
     features_df = pd.DataFrame({
         "cell_key": np.array(list(batch_dict.keys())),
@@ -161,6 +164,7 @@ def build_feature_df(batch_dict):
         "minimum_dQ_5_4": minimum_dQ_5_4,
         "variance_dQ_5_4": variance_dQ_5_4,
         "cycle_life": cycle_life,
+        "cycle_550_clf": cycle_550_clf
     })
 
     print("Done building features")
