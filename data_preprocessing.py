@@ -4,23 +4,44 @@ from plotly import tools
 import plotly.offline as pyo
 import plotly.graph_objs as go
 
+
 def preprocess_cycle(
-    Qd, 
-    T, 
-    V, 
-    I, 
+    cycle,
     I_thresh=-3.99, 
     V_resample_start=3.5, 
     V_resample_stop=2.0, 
     V_resample_steps=1000,
     return_original_data=False):
+    """Processes data (Qd, T, V, t) from one cycle and resamples Qd, T and V to a predefinded dimension.
+    high_current_discharging_time will be computed with t and is the only returned feature that is a scalar.
     
+    Arguments:
+        cycle {batch["cell"]["cycles"]["cycle"]} -- One cycle entry from the original data.
+    
+    Keyword Arguments:
+        I_thresh {float} -- Only measurements where the current is smaller than this threshold are chosen (default: {-3.99})
+        V_resample_start {float} -- Start value for the resampled V (default: {3.5})
+        V_resample_stop {float} -- Stop value for the resampled V (default: {2.0})
+        V_resample_steps {int} -- Number of steps V (and Qd and T) are resampled (default: {1000})
+        return_original_data {bool} -- Weather the original datapoints, which were used for interpolation,
+            shold be returned in the results  (default: {False})
+    
+    Returns:
+        {dict} -- Dictionary with the resampled values Qd_resample, T_resample over V_resample. 
+    """
+
+    Qd = cycle["Qd"]
+    T = cycle["T"]
+    V = cycle["V"]
+    I = cycle["I"]
+    t = cycle["t"]
     ## Only take the measurements during high current discharging.
     high_current_discharge = I < I_thresh
     
     Qd_dis = Qd[high_current_discharge]
     T_dis = T[high_current_discharge]
-    V_dis = V[high_current_discharge]    
+    V_dis = V[high_current_discharge]
+    t_dis = t[high_current_discharge]
     
     ## Only take the measurements, where V is decreasing (needed for interpolation).
     # This is done by comparing V_dis to the accumulated minimum of V_dis.
@@ -31,7 +52,10 @@ def preprocess_cycle(
     Qd_dis_dec = Qd_dis[v_decreasing]
     T_dis_dec = T_dis[v_decreasing]
     V_dis_dec = V_dis[v_decreasing]
-    
+    t_dis_dec = t_dis[v_decreasing]
+
+    high_current_discharging_time = t_dis_dec.max() - t_dis_dec.min()
+
     assert float(len(Qd_dis_dec))/len(Qd_dis) >= 0.95, \
         """More than 5 precent of values V_dis were dropped ({} out of {}).
         There might be a small outlier in V_dis.""".format(len(Qd_dis)-len(Qd_dis_dec), len(Qd_dis))
@@ -46,7 +70,7 @@ def preprocess_cycle(
     # Only half is substracted so that no new "zero diff" positions are created.
     V_dis_strict_dec = V_dis_dec - (~no_zero_diff * min_diff / 2)
     
-    # Quick check before interpolating.
+    # Check before interpolating.
     assert np.all(np.diff(V_dis_strict_dec) < 0), "The result of V is not strictly decreasing. Do something."
     
     # Interpolate values and chose extrapolation, so interp_func can be evaluated over the whole v_resample range.
@@ -67,19 +91,28 @@ def preprocess_cycle(
             Qd_resample=Qd_resample,
             T_resample=T_resample,
             V_resample=V_resample,
-            Qd_original_data=Qd_dis_dec,   # Also return the subset of the original data for later comparison.
+            high_current_discharging_time=high_current_discharging_time,
+            # Original data used for interpolation.
+            Qd_original_data=Qd_dis_dec,
             T_original_data=T_dis_dec,
-            V_original_data=V_dis_dec
+            V_original_data=V_dis_dec,
+            t_original_data=t_dis_dec
             )
     else:
         return dict(
             Qd_resample=Qd_resample,
             T_resample=T_resample,
-            V_resample=V_resample
+            V_resample=V_resample,
+            high_current_discharging_time=high_current_discharging_time
             )
 
+
 def plot_preprocessing_results(results_dict):
-    """Plots comparison curves with plotly for a results dict return from preprocess_cycle_curves"""
+    """Plots comparison curves with plotly for a results dict.
+    
+    Arguments:
+        results_dict {dict} -- results returned from preprocess_cycle
+    """
 
     pyo.init_notebook_mode(connected=True)
 
