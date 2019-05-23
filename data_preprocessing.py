@@ -4,7 +4,16 @@ from plotly import tools
 import plotly.offline as pyo
 import plotly.graph_objs as go
 
-def preprocess_cycle(Qd, T, V, I, I_thresh=-3.99, V_resample_start=3.5, V_resample_stop=2.0, V_resample_steps=1000):
+def preprocess_cycle(
+    Qd, 
+    T, 
+    V, 
+    I, 
+    I_thresh=-3.99, 
+    V_resample_start=3.5, 
+    V_resample_stop=2.0, 
+    V_resample_steps=1000,
+    return_original_data=False):
     
     ## Only take the measurements during high current discharging.
     high_current_discharge = I < I_thresh
@@ -53,15 +62,21 @@ def preprocess_cycle(Qd, T, V, I, I_thresh=-3.99, V_resample_start=3.5, V_resamp
     Qd_resample = Qd_interp_func(V_resample)
     T_resample = T_interp_func(V_resample)
 
-    return dict(
-        Qd_resample=Qd_resample,
-        T_resample=T_resample,
-        V_resample=V_resample,
-        Qd_original_data=Qd_dis_dec,   # Also return the subset of the original data for later comparison.
-        T_original_data=T_dis_dec,
-        V_original_data=V_dis_dec
-        )
-
+    if return_original_data:
+        return dict(
+            Qd_resample=Qd_resample,
+            T_resample=T_resample,
+            V_resample=V_resample,
+            Qd_original_data=Qd_dis_dec,   # Also return the subset of the original data for later comparison.
+            T_original_data=T_dis_dec,
+            V_original_data=V_dis_dec
+            )
+    else:
+        return dict(
+            Qd_resample=Qd_resample,
+            T_resample=T_resample,
+            V_resample=V_resample
+            )
 
 def plot_preprocessing_results(results_dict):
     """Plots comparison curves with plotly for a results dict return from preprocess_cycle_curves"""
