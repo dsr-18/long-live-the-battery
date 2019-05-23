@@ -62,3 +62,45 @@ def preprocess_cycle(Qd, T, V, I, I_thresh=-3.99, V_resample_start=3.5, V_resamp
         V_subset=V_dis_dec
         )
 
+
+def plot_preprocessing_results(results_dict):
+    """Plots comparison curves with plotly for a results dict return from preprocess_cycle_curves"""
+
+    pyo.init_notebook_mode(connected=True)
+
+    Qd_subset_trace = go.Scatter(dict(
+        x=results_dict["Qd_subset"], 
+        y=results_dict["V_subset"], 
+        mode = 'markers', 
+        name='Qd original data'
+        ))
+    Qd_resample_trace = go.Scatter(dict(
+        x=results_dict["Qd_resample"], 
+        y=results_dict["V_resample"], 
+        mode='lines+markers', 
+        name='Qd resampled'
+        ))
+
+    T_subset_trace = go.Scatter(dict(
+        x=results_dict["T_subset"],
+        y=results_dict["V_subset"],
+        mode = 'markers',
+        name='T original data'
+        ))
+    T_resample_trace = go.Scatter(dict(
+        x=results_dict["T_resample"],
+        y=results_dict["V_resample"],
+        mode= 'lines+markers',
+        name='T resampled'
+        ))
+
+    fig = tools.make_subplots(rows=2, cols=1)
+
+    fig.append_trace(Qd_resample_trace, 1, 1)
+    fig.append_trace(Qd_subset_trace, 1, 1)
+
+    fig.append_trace(T_resample_trace, 2, 1)
+    fig.append_trace(T_subset_trace, 2, 1)
+
+    #fig['layout'].update(height=1000, width=1000)
+    pyo.plot(fig)
