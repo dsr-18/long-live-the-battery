@@ -57,9 +57,9 @@ def preprocess_cycle(Qd, T, V, I, I_thresh=-3.99, V_resample_start=3.5, V_resamp
         Qd_resample=Qd_resample,
         T_resample=T_resample,
         V_resample=V_resample,
-        Qd_subset=Qd_dis_dec,   # Also return the subset of the original data for later comparison.
-        T_subset=T_dis_dec,
-        V_subset=V_dis_dec
+        Qd_original_data=Qd_dis_dec,   # Also return the subset of the original data for later comparison.
+        T_original_data=T_dis_dec,
+        V_original_data=V_dis_dec
         )
 
 
@@ -68,9 +68,9 @@ def plot_preprocessing_results(results_dict):
 
     pyo.init_notebook_mode(connected=True)
 
-    Qd_subset_trace = go.Scatter(dict(
-        x=results_dict["Qd_subset"], 
-        y=results_dict["V_subset"], 
+    Qd_original_data_trace = go.Scatter(dict(
+        x=results_dict["Qd_original_data"], 
+        y=results_dict["V_original_data"], 
         mode = 'markers', 
         name='Qd original data'
         ))
@@ -81,9 +81,9 @@ def plot_preprocessing_results(results_dict):
         name='Qd resampled'
         ))
 
-    T_subset_trace = go.Scatter(dict(
-        x=results_dict["T_subset"],
-        y=results_dict["V_subset"],
+    T_original_data_trace = go.Scatter(dict(
+        x=results_dict["T_original_data"],
+        y=results_dict["V_original_data"],
         mode = 'markers',
         name='T original data'
         ))
@@ -97,10 +97,10 @@ def plot_preprocessing_results(results_dict):
     fig = tools.make_subplots(rows=2, cols=1)
 
     fig.append_trace(Qd_resample_trace, 1, 1)
-    fig.append_trace(Qd_subset_trace, 1, 1)
+    fig.append_trace(Qd_original_data_trace, 1, 1)
 
     fig.append_trace(T_resample_trace, 2, 1)
-    fig.append_trace(T_subset_trace, 2, 1)
+    fig.append_trace(T_original_data_trace, 2, 1)
 
     #fig['layout'].update(height=1000, width=1000)
     pyo.plot(fig)
