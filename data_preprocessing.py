@@ -117,5 +117,5 @@ def plot_preprocessing_results(results_dict):
     fig.append_trace(T_resample_trace, 2, 1)
     fig.append_trace(T_original_data_trace, 2, 1)
 
-    #fig['layout'].update(height=1000, width=1000)
-    pyo.plot(fig)
+    fig['layout'].update(height=1000, width=1000)
+    pyo.iplot(fig)
