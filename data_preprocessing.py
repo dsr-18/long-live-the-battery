@@ -140,47 +140,52 @@ def preprocess_cycle(
 
 
 def plot_preprocessing_results(cycle_results_dict):
-    """Plots comparison curves with plotly for a results dict.
-    
+    """Plots comparison curves with plotly for a results dict of one cycle.
+    When the original data is not included, only the resampled data is shown.
+        
     Arguments:
-        results_dict {dict} -- results returned from preprocess_cycle
+        results_dict {dict} -- results returned from preprocess_cycle.
     """
 
     pyo.init_notebook_mode(connected=True)
 
-    Qd_original_data_trace = go.Scatter(dict(
-        x=cycle_results_dict["Qd_original_data"], 
-        y=cycle_results_dict["V_original_data"], 
-        mode = 'markers', 
-        name='Qd original data'
-        ))
-    Qd_resample_trace = go.Scatter(dict(
+    traces1 = []
+    if "Qd_original_data" in cycle_results_dict.keys():
+        traces1.append(go.Scatter(dict(
+            x=cycle_results_dict["Qd_original_data"], 
+            y=cycle_results_dict["V_original_data"], 
+            mode = 'markers', 
+            name='Qd original data'
+            )))
+    traces1.append(go.Scatter(dict(
         x=cycle_results_dict["Qd_resample"], 
         y=cycle_results_dict["V_resample"], 
         mode='lines+markers', 
         name='Qd resampled'
-        ))
-
-    T_original_data_trace = go.Scatter(dict(
-        x=cycle_results_dict["T_original_data"],
-        y=cycle_results_dict["V_original_data"],
-        mode = 'markers',
-        name='T original data'
-        ))
-    T_resample_trace = go.Scatter(dict(
+        )))
+    
+    traces2 = []
+    if "T_original_data" in cycle_results_dict.keys():
+        traces2.append(go.Scatter(dict(
+            x=cycle_results_dict["T_original_data"],
+            y=cycle_results_dict["V_original_data"],
+            mode = 'markers',
+            name='T original data'
+            )))
+    traces2.append(go.Scatter(dict(
         x=cycle_results_dict["T_resample"],
         y=cycle_results_dict["V_resample"],
         mode= 'lines+markers',
         name='T resampled'
-        ))
+        )))
 
     fig = tools.make_subplots(rows=2, cols=1)
 
-    fig.append_trace(Qd_resample_trace, 1, 1)
-    fig.append_trace(Qd_original_data_trace, 1, 1)
+    for trace in traces1:
+        fig.append_trace(trace, 1, 1)
 
-    fig.append_trace(T_resample_trace, 2, 1)
-    fig.append_trace(T_original_data_trace, 2, 1)
+    for trace in traces2:
+        fig.append_trace(trace, 2, 1)
 
     fig['layout'].update(height=1000, width=1000)
     pyo.iplot(fig)
