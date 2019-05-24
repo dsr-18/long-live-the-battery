@@ -5,6 +5,27 @@ import plotly.offline as pyo
 import plotly.graph_objs as go
 
 
+def interpolate_zero_diff_values(x, y, prepend_value=3.7):
+    y_copy = y.copy()
+    # Build a mask for all values, which do not decrease.
+    bigger_equal_zero_diff = np.diff(y_copy, prepend=prepend_value) >= 0
+    # Replace these values with interpolations.
+    interp_values = np.interp(
+        x[bigger_equal_zero_diff],  # Where to evaluate the interpolation function.
+        x[~bigger_equal_zero_diff],  # X values for the interpolation function.
+        y_copy[~bigger_equal_zero_diff]  # Y values for the interpolation function.
+        )
+    y_copy[bigger_equal_zero_diff] = interp_values
+    # If the last value has zero diff, the interpolation will replace this index with the same value.
+    # In this case a small value will be subtracted.
+    if bigger_equal_zero_diff[-1]:
+        y_copy[-1] -= 0.000001
+
+    assert np.all(np.diff(y_copy) < 0), "The result y_copy is not strictly decreasing. Do something."
+
+    return y_copy
+
+
 def preprocess_cycle(
     cycle,
     I_thresh=-3.99, 
@@ -16,7 +37,7 @@ def preprocess_cycle(
     high_current_discharging_time will be computed with t and is the only returned feature that is a scalar.
     
     Arguments:
-        cycle {batch["cell"]["cycles"]["cycle"]} -- One cycle entry from the original data.
+        cycle {dict} -- One cycle entry from the original data with keys 'I', 'Qd', 'T', 'V', 't'
     
     Keyword Arguments:
         I_thresh {float} -- Only measurements where the current is smaller than this threshold are chosen (default: {-3.99})
@@ -35,49 +56,52 @@ def preprocess_cycle(
     V = cycle["V"]
     I = cycle["I"]
     t = cycle["t"]
+    
     ## Only take the measurements during high current discharging.
     high_current_discharge = I < I_thresh
     
-    Qd_dis = Qd[high_current_discharge]
-    T_dis = T[high_current_discharge]
-    V_dis = V[high_current_discharge]
-    t_dis = t[high_current_discharge]
+    Qd_1 = Qd[high_current_discharge]
+    T_1 = T[high_current_discharge]
+    V_1 = V[high_current_discharge]
+    t_1 = t[high_current_discharge]
     
+    ## Sort all values after time.
+    sort_indeces = t_1.argsort()
+
+    Qd_2 = Qd_1[sort_indeces]
+    T_2 = T_1[sort_indeces]
+    V_2 = V_1[sort_indeces]
+    t_2 = t_1[sort_indeces]
+
     ## Only take the measurements, where V is decreasing (needed for interpolation).
-    # This is done by comparing V_dis to the accumulated minimum of V_dis.
-    #    accumulated minimum --> (taking always the smallest seen value from V_dis from left to right)
+    # This is done by comparing V_2 to the accumulated minimum of V_2.
+    #    accumulated minimum --> (taking always the smallest seen value from V_2 from left to right)
     # Then only the values that actually are the smallest value up until their index are chosen.
-    v_decreasing = V_dis == np.minimum.accumulate(V_dis)
+    v_decreasing = V_2 == np.minimum.accumulate(V_2)
 
-    Qd_dis_dec = Qd_dis[v_decreasing]
-    T_dis_dec = T_dis[v_decreasing]
-    V_dis_dec = V_dis[v_decreasing]
-    t_dis_dec = t_dis[v_decreasing]
+    Qd_3 = Qd_2[v_decreasing]
+    T_3 = T_2[v_decreasing]
+    V_3 = V_2[v_decreasing]
+    t_3 = t_2[v_decreasing]
 
-    high_current_discharging_time = t_dis_dec.max() - t_dis_dec.min()
+    high_current_discharging_time = t_3.max() - t_3.min()
 
-    assert float(len(Qd_dis_dec))/len(Qd_dis) >= 0.95, \
-        """More than 5 precent of values V_dis were dropped ({} out of {}).
-        There might be a small outlier in V_dis.""".format(len(Qd_dis)-len(Qd_dis_dec), len(Qd_dis))
-    
-    ## Make V_dis_dec strictly decending (needed for interpolation).
-    # Make a mask for only the V_dis_dec values that don't have zero difference to the preceding value.
-    no_zero_diff = (np.diff(V_dis_dec, prepend=0) != 0)
-    # Get the minimum absolute difference by which V_dis_dec is decreasing.
-    min_diff = np.min(np.abs(np.diff(V_dis_dec[no_zero_diff])))
-    # Substract half of the minimum difference to the values of V_dis_dec, which were not decreasing before.
-    # This makes V_dis_inc strictly monotone.
-    # Only half is substracted so that no new "zero diff" positions are created.
-    V_dis_strict_dec = V_dis_dec - (~no_zero_diff * min_diff / 2)
-    
-    # Check before interpolating.
-    assert np.all(np.diff(V_dis_strict_dec) < 0), "The result of V is not strictly decreasing. Do something."
-    
+    try:
+        assert float(len(Qd_3))/len(Qd_2) >= 0.95, \
+            """More than 5 precent of values V_dis were dropped ({} out of {}).
+            There might be a small outlier in V_dis.""".format(len(Qd_2)-len(Qd_3), len(Qd_2))
+    except AssertionError as e:
+        print(e)
+        import pdb; pdb.set_trace()
+        
+    ## Make V_3 strictly decending (needed for interpolation).
+    V_3_strict_dec = interpolate_zero_diff_values(t_3, V_3)
+
     # Interpolate values and chose extrapolation, so interp_func can be evaluated over the whole v_resample range.
-    # V_dis_strict_dec is inverted because it has to be increasing for interpolation.
-    # Qd_dis_dec and T_dis_dec are also inverted, so the correct values line up.
-    Qd_interp_func = interp1d(V_dis_strict_dec[::-1], Qd_dis_dec[::-1], fill_value='extrapolate')
-    T_interp_func = interp1d(V_dis_strict_dec[::-1], T_dis_dec[::-1], fill_value='extrapolate')
+    # V_3_strict_dec is inverted because it has to be increasing for interpolation.
+    # Qd_3 and T_3 are also inverted, so the correct values line up.
+    Qd_interp_func = interp1d(V_3_strict_dec[::-1], Qd_3[::-1], fill_value='extrapolate')
+    T_interp_func = interp1d(V_3_strict_dec[::-1], T_3[::-1], fill_value='extrapolate')
 
     # For resampling the decreasing order is chosen again.
     # The order doesn't matter for evaluating Qd_interp_func.
@@ -93,10 +117,10 @@ def preprocess_cycle(
             V_resample=V_resample,
             high_current_discharging_time=high_current_discharging_time,
             # Original data used for interpolation.
-            Qd_original_data=Qd_dis_dec,
-            T_original_data=T_dis_dec,
-            V_original_data=V_dis_dec,
-            t_original_data=t_dis_dec
+            Qd_original_data=Qd_3,
+            T_original_data=T_3,
+            V_original_data=V_3,
+            t_original_data=t_3
             )
     else:
         return dict(
