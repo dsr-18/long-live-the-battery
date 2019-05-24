@@ -97,11 +97,19 @@ def preprocess_cycle(
     ## Make V_3 strictly decending (needed for interpolation).
     V_3_strict_dec = interpolate_zero_diff_values(t_3, V_3)
 
-    # Interpolate values and chose extrapolation, so interp_func can be evaluated over the whole v_resample range.
-    # V_3_strict_dec is inverted because it has to be increasing for interpolation.
-    # Qd_3 and T_3 are also inverted, so the correct values line up.
-    Qd_interp_func = interp1d(V_3_strict_dec[::-1], Qd_3[::-1], fill_value='extrapolate')
-    T_interp_func = interp1d(V_3_strict_dec[::-1], T_3[::-1], fill_value='extrapolate')
+    ## Make itnerpolation function.
+    Qd_interp_func = interp1d(
+        V_3_strict_dec[::-1],  # V_3_strict_dec is inverted because it has to be increasing for interpolation.
+        Qd_3[::-1],  # Qd_3 and T_3 are also inverted, so the correct values line up.
+        bounds_error=False,  # Allows the function to be evaluated outside of the range of V_3_strict_dec.
+        fill_value=(Qd_3[::-1][0], Qd_3[::-1][-1])  # Values to use, when evaluated outside of V_3_strict_dec.
+        )
+    T_interp_func = interp1d(
+        V_3_strict_dec[::-1],
+        T_3[::-1],
+        bounds_error=False,
+        fill_value=(T_3[::-1][0], T_3[::-1][-1])
+        )
 
     # For resampling the decreasing order is chosen again.
     # The order doesn't matter for evaluating Qd_interp_func.
