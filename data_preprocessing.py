@@ -88,8 +88,8 @@ def preprocess_cycle(
 
     try:
         assert float(len(Qd_3))/len(Qd_2) >= 0.95, \
-            """More than 5 precent of values V_dis were dropped ({} out of {}).
-            There might be a small outlier in V_dis.""".format(len(Qd_2)-len(Qd_3), len(Qd_2))
+            """More than 5 precent of values were dropped ({} out of {}).
+            There might be a small outlier in V_2.""".format(len(Qd_2)-len(Qd_3), len(Qd_2))
     except AssertionError as e:
         print(e)
         import pdb; pdb.set_trace()
@@ -131,7 +131,7 @@ def preprocess_cycle(
             )
 
 
-def plot_preprocessing_results(results_dict):
+def plot_preprocessing_results(cycle_results_dict):
     """Plots comparison curves with plotly for a results dict.
     
     Arguments:
@@ -141,27 +141,27 @@ def plot_preprocessing_results(results_dict):
     pyo.init_notebook_mode(connected=True)
 
     Qd_original_data_trace = go.Scatter(dict(
-        x=results_dict["Qd_original_data"], 
-        y=results_dict["V_original_data"], 
+        x=cycle_results_dict["Qd_original_data"], 
+        y=cycle_results_dict["V_original_data"], 
         mode = 'markers', 
         name='Qd original data'
         ))
     Qd_resample_trace = go.Scatter(dict(
-        x=results_dict["Qd_resample"], 
-        y=results_dict["V_resample"], 
+        x=cycle_results_dict["Qd_resample"], 
+        y=cycle_results_dict["V_resample"], 
         mode='lines+markers', 
         name='Qd resampled'
         ))
 
     T_original_data_trace = go.Scatter(dict(
-        x=results_dict["T_original_data"],
-        y=results_dict["V_original_data"],
+        x=cycle_results_dict["T_original_data"],
+        y=cycle_results_dict["V_original_data"],
         mode = 'markers',
         name='T original data'
         ))
     T_resample_trace = go.Scatter(dict(
-        x=results_dict["T_resample"],
-        y=results_dict["V_resample"],
+        x=cycle_results_dict["T_resample"],
+        y=cycle_results_dict["V_resample"],
         mode= 'lines+markers',
         name='T resampled'
         ))
