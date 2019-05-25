@@ -33,7 +33,19 @@ def multiple_array_indexing(valid_numpy_index, *args, drop_warning=False, drop_w
     else:
         return tuple(indexed_arrays)
   
-def make_strictly_descending(x_interp, y_interp, prepend_value=3.7):     
+def make_strictly_decreasing(x_interp, y_interp, prepend_value=3.7):     
+    """Takes a monotonically decreasing array y_interp and makes it strictly decreasing by interpolation over x_interp.
+    
+    Arguments:
+        x_interp {numpy.ndarray} -- The values to interpolate over.
+        y_interp {numpy.ndarray} -- Monotonically decreasing values.
+    
+    Keyword Arguments:
+        prepend_value {float} -- Value to prepend to y_interp for assesing the difference to the preceding value. (default: {3.7})
+    
+    Returns:
+        numpy.ndarray -- y_interp with interpolated values, where there used to be zero difference to the preceding value.
+    """
     y_copy = y_interp.copy()
     # Make the tale interpolatable if the last value is not the single minimum.
     if y_copy[-1] >= y_copy[-2]:
@@ -60,7 +72,8 @@ def preprocess_cycle(
     V_resample_start=3.5, 
     V_resample_stop=2.0, 
     V_resample_steps=1000,
-    return_original_data=False):
+    return_original_data=False
+    ):
     """Processes data (Qd, T, V, t) from one cycle and resamples Qd, T and V to a predefinded dimension.
     high_current_discharging_time will be computed based on t and is the only returned feature that is a scalar.
     
@@ -95,15 +108,14 @@ def preprocess_cycle(
 
     high_current_discharging_time = t.max() - t.min()  # Scalar feature which is returned later.
 
-    ## Only take the measurements, where V is decreasing (needed for interpolation).
-    # This is done by comparing V_2 to the accumulated minimum of V_2.
-    #    accumulated minimum --> (taking always the smallest seen value from V_2 from left to right)
-    # Then only the values that actually are the smallest value up until their index are chosen.
+    ## Only take the measurements, where V is monotonically decreasing (needed for interpolation).
+    # This is done by comparing V to the accumulated minimum of V.
+    #    accumulated minimum --> (taking always the smallest seen value from V from left to right)
     v_decreasing = V == np.minimum.accumulate(V)
     Qd, T, V, t = multiple_array_indexing(v_decreasing, Qd, T, V, t, drop_warning=True)
         
-    ## Make V_3 strictly decending (needed for interpolation).
-    V_strict_dec = make_strictly_descending(t, V)
+    ## Make V_3 strictly decreasing (needed for interpolation).
+    V_strict_dec = make_strictly_decreasing(t, V)
 
     ## Make itnerpolation function.
     Qd_interp_func = interp1d(
@@ -145,6 +157,36 @@ def preprocess_cycle(
             V_resample=V_resample,
             high_current_discharging_time=high_current_discharging_time
             )
+
+
+def preprocess_batch(batch_dict, return_original_data=False):
+    batch_results = dict()
+    for i, (cell_key, cell_value) in enumerate(batch_dict.items()):
+        #TODO: remove break.
+        if i == 3:
+            break
+        
+        batch_results[cell_key] = dict(
+            cycle_life=cell_value["cycle_life"][0][0],
+            summary=dict(
+                IR = cell_value["summary"]["IR"],
+                QD = cell_value["summary"]["QD"],
+                remaining_cycle_life = cell_value["cycle_life"][0][0] - cell_value["summary"]["cycle"],
+                high_current_discharging_time = np.zeros(int(cell_value["cycle_life"][0][0]))
+            ),
+            cycles=dict()
+        )
+        for cycle_key, cycle_value in cell_value["cycles"].items():
+            if cycle_key == '0':  # Has to be skipped since there are often times only two measurements.
+                continue
+            cycle_results = preprocess_cycle(cycle_value, return_original_data=return_original_data)
+            
+            batch_results[cell_key]["summary"]["high_current_discharging_time"][int(cycle_key)-1] = \
+                cycle_results.pop("high_current_discharging_time")
+            batch_results[cell_key]["cycles"][cycle_key] = cycle_results
+        print("Processed", cell_key)
+    
+    return batch_results
 
 
 def plot_preprocessing_results(cycle_results_dict):
