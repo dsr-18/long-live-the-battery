@@ -3,26 +3,54 @@ from scipy.interpolate import interp1d
 from plotly import tools
 import plotly.offline as pyo
 import plotly.graph_objs as go
+import warnings
 
 
-def interpolate_zero_diff_values(x, y, prepend_value=3.7):
-    y_copy = y.copy()
+def multiple_array_indexing(valid_numpy_index, *args, drop_warning=False, drop_warning_thresh=0.10):
+    """Indexes multiple numpy arrays at once and returns the result in a tuple.
+    
+    Arguments:
+        numpy_index {numpy.ndarray or integer sequence} -- The used indeces.
+    
+    Returns:
+        tuple -- reindexed numpy arrays from *args in the same order.
+    """
+    indexed_arrays = [arg[valid_numpy_index].copy() for arg in args]    
+    
+    if drop_warning:
+        # Check if too many values were dropped during indexing.
+        try:
+            assert float(len(args[0])-len(indexed_arrays[0])) / len(args[0]) < drop_warning_thresh, \
+                """More than {} percent of values were dropped ({} out of {}).""".format(
+                        drop_warning_thresh*100,
+                        len(args[0])-len(indexed_arrays[0]),
+                        len(args[0])
+                    )
+        except AssertionError as e:
+            warnings.warn(str(e))
+        finally:
+            return tuple(indexed_arrays)
+    else:
+        return tuple(indexed_arrays)
+  
+def make_strictly_descending(x_interp, y_interp, prepend_value=3.7):     
+    y_copy = y_interp.copy()
+    # Make the tale interpolatable if the last value is not the single minimum.
+    if y_copy[-1] >= y_copy[-2]:
+        y_copy[-1] -= 0.0001
+        
     # Build a mask for all values, which do not decrease.
     bigger_equal_zero_diff = np.diff(y_copy, prepend=prepend_value) >= 0
-    # Replace these values with interpolations.
+    # Replace these values with interpolations based on their border values.
     interp_values = np.interp(
-        x[bigger_equal_zero_diff],  # Where to evaluate the interpolation function.
-        x[~bigger_equal_zero_diff],  # X values for the interpolation function.
+        x_interp[bigger_equal_zero_diff],  # Where to evaluate the interpolation function.
+        x_interp[~bigger_equal_zero_diff],  # X values for the interpolation function.
         y_copy[~bigger_equal_zero_diff]  # Y values for the interpolation function.
         )
     y_copy[bigger_equal_zero_diff] = interp_values
-    # If the last value has zero diff, the interpolation will replace this index with the same value.
-    # In this case a small value will be subtracted.
-    if bigger_equal_zero_diff[-1]:
-        y_copy[-1] -= 0.000001
-
-    assert np.all(np.diff(y_copy) < 0), "The result y_copy is not strictly decreasing. Do something."
-
+    
+    assert np.all(np.diff(y_copy) < 0), "The result y_copy is not strictly decreasing!"
+    
     return y_copy
 
 
@@ -34,7 +62,7 @@ def preprocess_cycle(
     V_resample_steps=1000,
     return_original_data=False):
     """Processes data (Qd, T, V, t) from one cycle and resamples Qd, T and V to a predefinded dimension.
-    high_current_discharging_time will be computed with t and is the only returned feature that is a scalar.
+    high_current_discharging_time will be computed based on t and is the only returned feature that is a scalar.
     
     Arguments:
         cycle {dict} -- One cycle entry from the original data with keys 'I', 'Qd', 'T', 'V', 't'
@@ -48,7 +76,7 @@ def preprocess_cycle(
             shold be returned in the results  (default: {False})
     
     Returns:
-        {dict} -- Dictionary with the resampled values Qd_resample, T_resample over V_resample. 
+        {dict} -- Dictionary with the resampled (and original) values. 
     """
 
     Qd = cycle["Qd"]
@@ -59,56 +87,36 @@ def preprocess_cycle(
     
     ## Only take the measurements during high current discharging.
     high_current_discharge = I < I_thresh
-    
-    Qd_1 = Qd[high_current_discharge]
-    T_1 = T[high_current_discharge]
-    V_1 = V[high_current_discharge]
-    t_1 = t[high_current_discharge]
+    Qd, T, V, t = multiple_array_indexing(high_current_discharge, Qd, T, V, t)
     
     ## Sort all values after time.
-    sort_indeces = t_1.argsort()
+    sort_indeces = t.argsort()
+    Qd, T, V, t = multiple_array_indexing(sort_indeces, Qd, T, V, t)
 
-    Qd_2 = Qd_1[sort_indeces]
-    T_2 = T_1[sort_indeces]
-    V_2 = V_1[sort_indeces]
-    t_2 = t_1[sort_indeces]
+    high_current_discharging_time = t.max() - t.min()  # Scalar feature which is returned later.
 
     ## Only take the measurements, where V is decreasing (needed for interpolation).
     # This is done by comparing V_2 to the accumulated minimum of V_2.
     #    accumulated minimum --> (taking always the smallest seen value from V_2 from left to right)
     # Then only the values that actually are the smallest value up until their index are chosen.
-    v_decreasing = V_2 == np.minimum.accumulate(V_2)
-
-    Qd_3 = Qd_2[v_decreasing]
-    T_3 = T_2[v_decreasing]
-    V_3 = V_2[v_decreasing]
-    t_3 = t_2[v_decreasing]
-
-    high_current_discharging_time = t_3.max() - t_3.min()
-
-    try:
-        assert float(len(Qd_3))/len(Qd_2) >= 0.95, \
-            """More than 5 precent of values were dropped ({} out of {}).
-            There might be a small outlier in V_2.""".format(len(Qd_2)-len(Qd_3), len(Qd_2))
-    except AssertionError as e:
-        print(e)
-        import pdb; pdb.set_trace()
+    v_decreasing = V == np.minimum.accumulate(V)
+    Qd, T, V, t = multiple_array_indexing(v_decreasing, Qd, T, V, t, drop_warning=True)
         
     ## Make V_3 strictly decending (needed for interpolation).
-    V_3_strict_dec = interpolate_zero_diff_values(t_3, V_3)
+    V_strict_dec = make_strictly_descending(t, V)
 
     ## Make itnerpolation function.
     Qd_interp_func = interp1d(
-        V_3_strict_dec[::-1],  # V_3_strict_dec is inverted because it has to be increasing for interpolation.
-        Qd_3[::-1],  # Qd_3 and T_3 are also inverted, so the correct values line up.
-        bounds_error=False,  # Allows the function to be evaluated outside of the range of V_3_strict_dec.
-        fill_value=(Qd_3[::-1][0], Qd_3[::-1][-1])  # Values to use, when evaluated outside of V_3_strict_dec.
+        V_strict_dec[::-1],  # V_strict_dec is inverted because it has to be increasing for interpolation.
+        Qd[::-1],  # Qd and T are also inverted, so the correct values line up.
+        bounds_error=False,  # Allows the function to be evaluated outside of the range of V_strict_dec.
+        fill_value=(Qd[::-1][0], Qd[::-1][-1])  # Values to use, when evaluated outside of V_strict_dec.
         )
     T_interp_func = interp1d(
-        V_3_strict_dec[::-1],
-        T_3[::-1],
+        V_strict_dec[::-1],
+        T[::-1],
         bounds_error=False,
-        fill_value=(T_3[::-1][0], T_3[::-1][-1])
+        fill_value=(T[::-1][0], T[::-1][-1])
         )
 
     # For resampling the decreasing order is chosen again.
@@ -125,10 +133,10 @@ def preprocess_cycle(
             V_resample=V_resample,
             high_current_discharging_time=high_current_discharging_time,
             # Original data used for interpolation.
-            Qd_original_data=Qd_3,
-            T_original_data=T_3,
-            V_original_data=V_3,
-            t_original_data=t_3
+            Qd_original_data=Qd,
+            T_original_data=T,
+            V_original_data=V,
+            t_original_data=t
             )
     else:
         return dict(
