@@ -159,13 +159,21 @@ def preprocess_cycle(
             )
 
 
-def preprocess_batch(batch_dict, return_original_data=False):
+def preprocess_batch(batch_dict, return_original_data=False, verbose=False):
+    """Processes all cycles of every cell in batch_dict and returns the results in the same format.
+    
+    Arguments:
+        batch_dict {dict} -- Unprocessed batch of cell data.
+    
+    Keyword Arguments:
+        return_original_data {bool} -- If True, the original data used for interpolation is returned. (default: {False})
+        verbose {bool} -- If True prints progress for every cell (default: {False})
+    
+    Returns:
+        dict -- Results in the same format as batch_dict.
+    """
     batch_results = dict()
     for i, (cell_key, cell_value) in enumerate(batch_dict.items()):
-        #TODO: remove break.
-        if i == 3:
-            break
-        
         batch_results[cell_key] = dict(
             cycle_life=cell_value["cycle_life"][0][0],
             summary=dict(
@@ -184,7 +192,8 @@ def preprocess_batch(batch_dict, return_original_data=False):
             batch_results[cell_key]["summary"]["high_current_discharging_time"][int(cycle_key)-1] = \
                 cycle_results.pop("high_current_discharging_time")
             batch_results[cell_key]["cycles"][cycle_key] = cycle_results
-        print("Processed", cell_key)
+        if verbose:
+            print("Processed", cell_key)
     
     return batch_results
 
