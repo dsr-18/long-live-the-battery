@@ -173,7 +173,7 @@ def preprocess_batch(batch_dict, return_original_data=False, verbose=False):
         dict -- Results in the same format as batch_dict.
     """
     batch_results = dict()
-    for i, (cell_key, cell_value) in enumerate(batch_dict.items()):
+    for cell_key, cell_value in batch_dict.items():
         batch_results[cell_key] = dict(
             cycle_life=cell_value["cycle_life"][0][0],
             summary=dict(
