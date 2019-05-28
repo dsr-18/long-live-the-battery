@@ -149,6 +149,13 @@ def preprocess_cycle(
     ## Only take the measurements, where V is monotonically decreasing (needed for interpolation).
     # This is done by comparing V to the accumulated minimum of V.
     #    accumulated minimum --> (taking always the smallest seen value from V from left to right)
+    
+    outlier_dict = check_outliers(Qd=Qd, T=T, V=V, t=t)
+
+    high_current_discharging_time = t.max() - t.min()  # Scalar feature which is returned later.
+    if outlier_dict.get("t"):  # If an outlier was found, then calculate new discharge time.
+        not_t_outliers = ~outlier_dict["t"]["outlier_mask"]
+        high_current_discharging_time = np.sum(np.diff(t, prepend=t[0])[not_t_outliers])  # Only sum the diff values, that aren't a diff outlier.
     v_decreasing = V == np.minimum.accumulate(V)
     Qd, T, V, t = multiple_array_indexing(v_decreasing, Qd, T, V, t, drop_warning=True)
         
