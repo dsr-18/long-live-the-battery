@@ -18,7 +18,7 @@ def multiple_array_indexing(valid_numpy_index, *args, drop_warning=False, drop_w
     indexed_arrays = [arg[valid_numpy_index].copy() for arg in args]    
     
     if drop_warning:
-        # Check if too many values were dropped during indexing.
+        # Check if a higher percentage of values than drop_warning_thresh were dropped during indexing.
         try:
             assert float(len(args[0])-len(indexed_arrays[0])) / len(args[0]) < drop_warning_thresh, \
                 """More than {} percent of values were dropped ({} out of {}).""".format(
@@ -28,6 +28,8 @@ def multiple_array_indexing(valid_numpy_index, *args, drop_warning=False, drop_w
                     )
         except AssertionError as e:
             warnings.warn(str(e))
+            # from generic_helpers import simple_plotly
+            # simple_plotly(args[-1], V_indexed=indexed_arrays[2], V_original=args[2])
         finally:
             return tuple(indexed_arrays)
     else:
@@ -98,7 +100,7 @@ def make_strictly_decreasing(x_interp, y_interp, prepend_value=3.7):
     
     # This has to be given, since interpolation will fail otherwise.
     assert np.all(np.diff(y_interp_copy) < 0), "The result y_copy is not strictly decreasing!"
-    
+                
     return y_interp_copy
 
 
@@ -120,7 +122,7 @@ def preprocess_cycle(
         I_thresh {float} -- Only measurements where the current is smaller than this threshold are chosen (default: {-3.99})
         V_resample_start {float} -- Start value for the resampled V (default: {3.5})
         V_resample_stop {float} -- Stop value for the resampled V (default: {2.0})
-        V_resample_steps {int} -- Number of steps V (and Qd and T) are resampled (default: {1000})
+        V_resample_steps {int} -- Number of steps V, Qd and T are resampled (default: {1000})
         return_original_data {bool} -- Weather the original datapoints, which were used for interpolation,
             shold be returned in the results  (default: {False})
     
@@ -156,13 +158,25 @@ def preprocess_cycle(
     if outlier_dict.get("t"):  # If an outlier was found, then calculate new discharge time.
         not_t_outliers = ~outlier_dict["t"]["outlier_mask"]
         high_current_discharging_time = np.sum(np.diff(t, prepend=t[0])[not_t_outliers])  # Only sum the diff values, that aren't a diff outlier.
+    
+    if outlier_dict:  # If V was an outlier before, check out the result
+        debug_plot(Qd, T, V, t)
+
     v_decreasing = V == np.minimum.accumulate(V)
     Qd, T, V, t = multiple_array_indexing(v_decreasing, Qd, T, V, t, drop_warning=True)
-        
+    
+    #check_outliers(Qd=Qd, T=T, V=V, t=t)
+    if outlier_dict:  # If V was an outlier before, check out the result
+        debug_plot(Qd, T, V, t)
+
     ## Make V_3 strictly decreasing (needed for interpolation).
     V_strict_dec = make_strictly_decreasing(t, V)
 
-    ## Make itnerpolation function.
+    if outlier_dict:  # If V was an outlier before, check out the result
+        debug_plot(Qd, T, V, t)
+  
+        
+    ## Make interpolation function.
     Qd_interp_func = interp1d(
         V_strict_dec[::-1],  # V_strict_dec is inverted because it has to be increasing for interpolation.
         Qd[::-1],  # Qd and T are also inverted, so the correct values line up.
@@ -295,7 +309,6 @@ def plot_preprocessing_results(cycle_results_dict, inline=True):
     
     if inline:
         pyo.iplot(fig)
-
     else:
         pyo.plot(fig)
 
