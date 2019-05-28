@@ -254,3 +254,15 @@ def plot_preprocessing_results(cycle_results_dict, inline=True):
 
     else:
         pyo.plot(fig)
+
+
+def main():
+    from rebuilding_features import load_batches_to_dict
+    
+    batch1 = load_batches_to_dict(amount_to_load=1)    
+
+    results = preprocess_batch(batch1, return_original_data=True, verbose=True)
+    print("Done!")
+
+if __name__ == "__main__":
+    main()
