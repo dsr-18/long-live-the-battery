@@ -199,7 +199,7 @@ def preprocess_batch(batch_dict, return_original_data=False, verbose=False):
     return batch_results
 
 
-def plot_preprocessing_results(cycle_results_dict):
+def plot_preprocessing_results(cycle_results_dict, inline=True):
     """Plots comparison curves with plotly for a results dict of one cycle.
     When the original data is not included, only the resampled data is shown.
         
@@ -248,4 +248,9 @@ def plot_preprocessing_results(cycle_results_dict):
         fig.append_trace(trace, 2, 1)
 
     fig['layout'].update(height=1000, width=1000)
-    pyo.iplot(fig)
+    
+    if inline:
+        pyo.iplot(fig)
+
+    else:
+        pyo.plot(fig)
