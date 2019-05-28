@@ -32,7 +32,42 @@ def multiple_array_indexing(valid_numpy_index, *args, drop_warning=False, drop_w
             return tuple(indexed_arrays)
     else:
         return tuple(indexed_arrays)
-  
+
+
+def check_outliers(std_multiple_threshold=15, verbose=True, **kwargs):
+    outlier_dict = dict()
+    
+    for key, value in kwargs.items():
+        diff_values = np.diff(value, prepend=value[0])
+        std_diff = diff_values.std()
+        outlier_mask = diff_values > (std_multiple_threshold * std_diff)  # Get the mask for all outliers
+        outlier_indeces = np.argwhere(outlier_mask)  # Get the indeces for all outliers
+        
+        if outlier_indeces.size > 0:  # Add outlier information to the outlier dict, if an outlier has been found
+            outlier_dict[key] = dict(std_diff = std_diff,
+                                     original_values = value[outlier_indeces],
+                                     diff_values = diff_values[outlier_indeces],
+                                     outlier_indeces = outlier_indeces,
+                                     outlier_mask=outlier_mask)
+    
+    if verbose:
+        if outlier_dict:  
+            # If outlier_dict has any entries, then print a version without the mask (too big)
+            outlier_dict_wo_mask = dict()  # Generate a smaller dict for better printing
+            for key in outlier_dict.keys():
+                outlier_dict_wo_mask[key] = {k: v for k, v in outlier_dict[key].items() if k != "outlier_mask"}
+    
+    return outlier_dict
+
+def debug_plot(Qd, T, V, t):
+    from generic_helpers import simple_plotly
+    sample_space = np.arange(len(V))
+    simple_plotly(sample_space, V=V, Q=Qd, T=T, t=t)
+    simple_plotly(Qd, V=V)
+    simple_plotly(T, V=V)
+    
+
+
 def make_strictly_decreasing(x_interp, y_interp, prepend_value=3.7):     
     """Takes a monotonically decreasing array y_interp and makes it strictly decreasing by interpolation over x_interp.
     
