@@ -57,6 +57,8 @@ def load_batches_to_dict(amount_to_load=3):
         del batch2['b2c15']
         del batch2['b2c16']
 
+        # All keys have to be updated after the reordering.
+        batches_dict.update(batch1)
         batches_dict.update(batch2)
 
     if amount_to_load > 2:
