@@ -11,3 +11,6 @@ __pycache__/
 # ignore ide
 .idea
 .vscode/*
+
+# ignore temp files from plotly
+*.html
