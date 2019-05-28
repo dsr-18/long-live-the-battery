@@ -106,8 +106,10 @@ def preprocess_cycle(
     ## Sort all values after time.
     sort_indeces = t.argsort()
     Qd, T, V, t = multiple_array_indexing(sort_indeces, Qd, T, V, t)
-
-    high_current_discharging_time = t.max() - t.min()  # Scalar feature which is returned later.
+    
+    ## Only take timesteps where time is strictly increasing.
+    increasing_time = np.diff(t, prepend=0) > 0
+    Qd, T, V, t = multiple_array_indexing(increasing_time, Qd, T, V, t)
 
     ## Only take the measurements, where V is monotonically decreasing (needed for interpolation).
     # This is done by comparing V to the accumulated minimum of V.
