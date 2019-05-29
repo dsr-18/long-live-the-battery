@@ -36,6 +36,13 @@ def multiple_array_indexing(valid_numpy_index, *args, drop_warning=False, drop_w
         return tuple(indexed_arrays)
 
 
+def outlier_dict_without_mask(outlier_dict):
+    outlier_dict_wo_mask = dict()  # Generate a smaller dict for better printing
+    for key in outlier_dict.keys():
+        outlier_dict_wo_mask[key] = {k: v for k, v in outlier_dict[key].items() if k != "outlier_mask"}
+    return outlier_dict_wo_mask
+
+
 def check_outliers(std_multiple_threshold=15, verbose=False, **kwargs):
     """Checks for outliers in all numpy arrays given in kwargs by computing the standard deveation of np.diff().
     Outliers for every array are defined at the indeces, where the np.diff() is bigger than
