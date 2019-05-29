@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
-from scipy.stats import skew, kurtosis
 import pickle
 from pathlib import Path
-from sklearn.linear_model import LinearRegression
 
 
 def load_batches_to_dict(amount_to_load=3):
@@ -84,6 +82,10 @@ def build_feature_df(batch_dict):
     """Returns a pandas DataFrame with all originally used features out of a loaded batch dict"""
 
     print("Start building features ...")
+    
+    from scipy.stats import skew, kurtosis
+    from sklearn.linear_model import LinearRegression
+    
     n_cells = len(batch_dict.keys())
 
     ## Initializing feature vectors:
