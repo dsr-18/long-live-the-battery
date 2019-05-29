@@ -70,13 +70,12 @@ def check_outliers(std_multiple_threshold=15, verbose=False, **kwargs):
                                      outlier_indeces = outlier_indeces,
                                      outlier_mask=outlier_mask)
     
-    if verbose:
-        if outlier_dict:  
-            # If outlier_dict has any entries, then print a version without the mask (too big)
-            outlier_dict_wo_mask = dict()  # Generate a smaller dict for better printing
-            for key in outlier_dict.keys():
-                outlier_dict_wo_mask[key] = {k: v for k, v in outlier_dict[key].items() if k != "outlier_mask"}
-    
+    if verbose and outlier_dict:  
+        # If outlier_dict has any entries, then print a version without the mask (too big for printing)
+        outlier_dict_wo_mask = outlier_dict_without_mask(outlier_dict) # Generate a smaller dict for better printing
+        print("#########################")
+        print("Found outliers:")
+        pprint(outlier_dict_wo_mask)
     return outlier_dict
 
 def debug_plot(Qd, T, V, t):
