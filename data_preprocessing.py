@@ -4,6 +4,13 @@ from plotly import tools
 import plotly.offline as pyo
 import plotly.graph_objs as go
 import warnings
+from pprint import pprint
+
+
+class OutlierException(Exception):
+    def __init__(self, message, outlier_dict):
+        super().__init__(message)
+        self.outlier_dict = outlier_dict
 
 
 def multiple_array_indexing(valid_numpy_index, *args, drop_warning=False, drop_warning_thresh=0.10):
@@ -283,7 +290,15 @@ def preprocess_batch(batch_dict, return_original_data=False, verbose=False):
         for cycle_key, cycle_value in cell_value["cycles"].items():
             if cycle_key == '0':  # Has to be skipped since there are often times only two measurements.
                 continue
-            cycle_results = preprocess_cycle(cycle_value, return_original_data=return_original_data)
+            try:
+                cycle_results = preprocess_cycle(cycle_value, return_original_data=return_original_data)
+            except OutlierException as oe:
+                print(oe)
+                drop_info = {
+                    cell_key: {
+                        cycle_key: outlier_dict_without_mask(oe.outlier_dict) }}
+                cycles_drop_info.update(drop_info)
+                continue
             
             batch_results[cell_key]["summary"]["high_current_discharging_time"][int(cycle_key)-1] = \
                 cycle_results.pop("high_current_discharging_time")
