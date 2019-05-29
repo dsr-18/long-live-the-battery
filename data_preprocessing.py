@@ -36,7 +36,18 @@ def multiple_array_indexing(valid_numpy_index, *args, drop_warning=False, drop_w
         return tuple(indexed_arrays)
 
 
-def check_outliers(std_multiple_threshold=15, verbose=True, **kwargs):
+def check_outliers(std_multiple_threshold=15, verbose=False, **kwargs):
+    """Checks for outliers in all numpy arrays given in kwargs by computing the standard deveation of np.diff().
+    Outliers for every array are defined at the indeces, where the np.diff() is bigger than
+    std_multiple_threshold times the standard deviation.
+    
+    Keyword Arguments:
+        std_multiple_threshold {int} -- Threshold that defines an outlier (default: {15})
+        verbose {bool} -- If True, prints the values for every found outlier (default: {False})
+    
+    Returns:
+        dict -- The outliert results taged by the names given in kwargs
+    """
     outlier_dict = dict()
     
     for key, value in kwargs.items():
