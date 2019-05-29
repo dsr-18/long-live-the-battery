@@ -84,7 +84,26 @@ def debug_plot(Qd, T, V, t):
     simple_plotly(sample_space, V=V, Q=Qd, T=T, t=t)
     simple_plotly(Qd, V=V)
     simple_plotly(T, V=V)
-    
+
+
+def drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t):
+    if outlier_dict.get("t"):
+        t_outlier_mask = outlier_dict["t"]["diff_values"] > 100
+        if np.any(t_outlier_mask):  # Only do something if there are big outliers.
+            # If the big t outlier is right at the end if discharging, the whole cycle should be dropped.
+            indeces_before_t_outliers = outlier_dict["t"]["outlier_indeces"][t_outlier_mask] - 1  # Get the indeces 1 before the t outliers.
+            V_before_t_outlier = np.min(V[indeces_before_t_outliers])  # Get the minimum V value right before all t outliers.
+            
+            # If there is excatly one t outlier right at the end of discharging, drop all values after this index and continue with processing.
+            if indeces_before_t_outliers.size == 1 and V_before_t_outlier < 2.01:
+                i = int(indeces_before_t_outliers) + 1
+                return Qd[:i], T[:i], V[:i], t[:i]
+            else:
+                raise OutlierException(
+                    "Dropping cycle based on t outliers with value(s) {}".format(list(outlier_dict["t"]["diff_values"][t_outlier_mask])),
+                    outlier_dict)
+    else:
+        return Qd, T, V, t
 
 
 def make_strictly_decreasing(x_interp, y_interp, prepend_value=3.7):     
@@ -169,8 +188,9 @@ def preprocess_cycle(
     # This is done by comparing V to the accumulated minimum of V.
     #    accumulated minimum --> (taking always the smallest seen value from V from left to right)
     
-    outlier_dict = check_outliers(Qd=Qd, T=T, V=V, t=t)
-
+    outlier_dict = check_outliers(std_multiple_threshold=15, verbose=True, Qd=Qd, T=T, V=V, t=t)
+    Qd, T, V, t = drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t)
+    
     high_current_discharging_time = t.max() - t.min()  # Scalar feature which is returned later.
     if outlier_dict.get("t"):  # If an outlier was found, then calculate new discharge time.
         not_t_outliers = ~outlier_dict["t"]["outlier_mask"]
