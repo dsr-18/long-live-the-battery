@@ -198,28 +198,36 @@ def preprocess_cycle(
     outlier_dict = check_outliers(std_multiple_threshold=15, verbose=True, Qd=Qd, T=T, V=V, t=t)
     Qd, T, V, t = drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t)
     
-    high_current_discharging_time = t.max() - t.min()  # Scalar feature which is returned later.
-    if outlier_dict.get("t"):  # If an outlier was found, then calculate new discharge time.
-        not_t_outliers = ~outlier_dict["t"]["outlier_mask"]
-        high_current_discharging_time = np.sum(np.diff(t, prepend=t[0])[not_t_outliers])  # Only sum the diff values, that aren't a diff outlier.
+    # TODO: Drop cycle with big t outlierts EXCEPT when the ONLY outlier is at a point, where V_before_outlier is smaller than 2.01
+        # Maybe check Qd max from before cycle and after.
     
-    if outlier_dict:  # If V was an outlier before, check out the result
-        debug_plot(Qd, T, V, t)
-
+    # TODO: Check with new threshold after processing outliers of std >= 15
+    
+    # TODO: Counting all outliers for potential dropping.
+    
+    # keep cycle life the same
+    
+    # if outlier_dict:  # If V was an outlier before, check out the result
+    #     debug_plot(Qd, T, V, t)
+    
+    high_current_discharging_time = t.max() - t.min()  # Scalar feature which is returned later.
+    # if outlier_dict.get("t"):  # If an outlier was found, then calculate new discharge time.
+    #     not_t_outliers = ~outlier_dict["t"]["outlier_mask"]
+    #     high_current_discharging_time = np.sum(np.diff(t, prepend=t[0])[not_t_outliers])  # Only sum the diff values, that aren't a diff outlier.
+        
     v_decreasing = V == np.minimum.accumulate(V)
     Qd, T, V, t = multiple_array_indexing(v_decreasing, Qd, T, V, t, drop_warning=True)
     
-    #check_outliers(Qd=Qd, T=T, V=V, t=t)
-    if outlier_dict:  # If V was an outlier before, check out the result
-        debug_plot(Qd, T, V, t)
+    # #check_outliers(Qd=Qd, T=T, V=V, t=t)
+    # if outlier_dict:  # If V was an outlier before, check out the result
+    #     debug_plot(Qd, T, V, t)
 
     ## Make V_3 strictly decreasing (needed for interpolation).
     V_strict_dec = make_strictly_decreasing(t, V)
 
-    if outlier_dict:  # If V was an outlier before, check out the result
-        debug_plot(Qd, T, V, t)
-  
-        
+    # if outlier_dict:  # If V was an outlier before, check out the result
+    #     debug_plot(Qd, T, V, t)
+    
     ## Make interpolation function.
     Qd_interp_func = interp1d(
         V_strict_dec[::-1],  # V_strict_dec is inverted because it has to be increasing for interpolation.
@@ -262,7 +270,7 @@ def preprocess_cycle(
             )
 
 
-def preprocess_batch(batch_dict, return_original_data=False, verbose=False):
+def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_info=False, verbose=False):
     """Processes all cycles of every cell in batch_dict and returns the results in the same format.
     
     Arguments:
@@ -276,6 +284,7 @@ def preprocess_batch(batch_dict, return_original_data=False, verbose=False):
         dict -- Results in the same format as batch_dict.
     """
     batch_results = dict()
+    cycles_drop_info = dict()
     for cell_key, cell_value in batch_dict.items():
         batch_results[cell_key] = dict(
             cycle_life=cell_value["cycle_life"][0][0],
@@ -306,7 +315,14 @@ def preprocess_batch(batch_dict, return_original_data=False, verbose=False):
         if verbose:
             print("Processed", cell_key)
     
-    return batch_results
+    cycles_drop_info["number_distinct_cells"] = len(cycles_drop_info)
+    cycles_drop_info["number_distinct_cycles"] = sum([len(value) for key, value in cycles_drop_info.items()
+                                                      if key != "number_distinct_cells"])
+
+    if return_cycle_drop_info:
+        return batch_results, cycles_drop_info
+    else:
+        return batch_results
 
 
 def plot_preprocessing_results(cycle_results_dict, inline=True):
@@ -370,7 +386,9 @@ def main():
     
     batch1 = load_batches_to_dict(amount_to_load=1)    
 
-    results = preprocess_batch(batch1, return_original_data=True, verbose=True)
+    results, cycles_drop_info = preprocess_batch(batch1, return_original_data=True, return_cycle_drop_info=True, verbose=True)
+    # TODO: cycles_drop_info looks weird..
+    pprint(cycles_drop_info)
     print("Done!")
 
 if __name__ == "__main__":
