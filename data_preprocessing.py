@@ -63,7 +63,7 @@ def outlier_dict_without_mask(outlier_dict):
     return outlier_dict_wo_mask
 
 
-def check_outliers(std_multiple_threshold=15, verbose=False, **kwargs):
+def compute_outlier_dict(std_multiple_threshold, verbose=False, **kwargs):
     """Checks for outliers in all numpy arrays given in kwargs by computing the standard deveation of np.diff().
     Outliers for every array are defined at the indeces, where the np.diff() is bigger than
     std_multiple_threshold times the standard deviation.
@@ -153,6 +153,49 @@ def drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t, t_diff_outlier_thresh=1
         return Qd, T, V, t
 
 
+def drop_outliers_starting_left(std_multiple_threshold, **kwargs):
+    # Initialize and compute outliers
+    array_dict = kwargs  # kwargs is used, so the number of arrays can vary.
+    drop_counter = 0
+    outlier_dict = compute_outlier_dict(std_multiple_threshold, verbose=True, **array_dict)
+    original_outlier_dict = outlier_dict  # copy for debugging und raising OutlierException.
+    
+    # Process until no outliers are found.
+    while outlier_dict:  
+        # Get indeces of the left most outlier for every array.      
+        first_outlier_indeces = [np.min(outlier_info["outlier_indeces"]) for outlier_info in outlier_dict.values()]
+        # Only consider every index once and make it a list type for numpy indexing in array_exclude_index().
+        unique_indeces_to_drop = list(set(first_outlier_indeces))
+        
+        # Drop all unique outlier indeces from all arrays.
+        array_dict = {k: array_exclude_index(v, unique_indeces_to_drop) for k, v in array_dict.items()}
+        drop_counter += len(unique_indeces_to_drop)
+        
+        # Recompute outlierts after dropping the unique indeces from all arrays.
+        outlier_dict = compute_outlier_dict(std_multiple_threshold, **array_dict)
+    
+    if drop_counter > 0:
+        print("Dropped {} outliers in {}".format(drop_counter, list(original_outlier_dict.keys())))
+    
+    # if drop_whole_cycle_after:
+    #     if drop_counter >= drop_whole_cycle_after:
+    #         raise OutlierException(
+    #             "Dropping whole cycle based on threshold of {} outliers".format(drop_whole_cycle_after),
+    #             original_outlier_dict)
+    
+    # Returns all arrays in the order that they where given in kwargs
+    return tuple(v for v in array_dict.values())
+
+
+def array_exclude_index(arr, id):
+    """Returns the given array without the entry at id.
+    id can be any valid numpy index."""
+    
+    mask = np.ones_like(arr, bool)
+    mask[id] = False
+    return arr[mask]
+
+
 def make_strictly_decreasing(x_interp, y_interp, prepend_value=3.7):     
     """Takes a monotonically decreasing array y_interp and makes it strictly decreasing by interpolation over x_interp.
     
@@ -212,6 +255,9 @@ def preprocess_cycle(
     Returns:
         {dict} -- Dictionary with the resampled (and original) values. 
     """
+    # TODO: Handle small Qd outliers with diff around 0.04 so not all following values are dropped
+    # TODO: Process all batches before moving on?
+    # TODO: Check with new threshold after processing outliers of std >= 12
 
     Qd = cycle["Qd"]
     T = cycle["T"]
@@ -232,18 +278,15 @@ def preprocess_cycle(
     Qd, T, V, t = multiple_array_indexing(increasing_time_mask, Qd, T, V, t)
 
     
-    outlier_dict = check_outliers(std_multiple_threshold=15, Qd=Qd, T=T, V=V, t=t)
+    outlier_dict = compute_outlier_dict(std_multiple_threshold=15, Qd=Qd, T=T, V=V, t=t)
     if outlier_dict.get("t"):  # If any outliert was found in t
         Qd, T, V, t = drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t)
     
-    outlier_dict = check_outliers(std_multiple_threshold=15, verbose=True, Qd=Qd, T=T, V=V, t=t)
+    Qd, T, V, t = drop_outliers_starting_left(std_multiple_threshold=12, Qd=Qd, T=T, V=V, t=t)
     
-    # TODO: Check with new threshold after processing outliers of std >= 15
-        
     # if outlier_dict:  # If V was an outlier before, check out the result
     #     debug_plot(Qd, T, V, t)
     
-    high_current_discharging_time = t.max() - t.min()  # Scalar feature which is returned later.
     # if outlier_dict.get("t"):  # If an outlier was found, then calculate new discharge time.
     #     not_t_outliers = ~outlier_dict["t"]["outlier_mask"]
     #     high_current_discharging_time = np.sum(np.diff(t, prepend=t[0])[not_t_outliers])  # Only sum the diff values, that aren't a diff outlier.
@@ -260,8 +303,8 @@ def preprocess_cycle(
     # Only take the measurements, where V is monotonically decreasing (needed for interpolation).
     # This is done by comparing V to the accumulated minimum of V.
     #    accumulated minimum --> (taking always the smallest seen value from V from left to right)
-    v_decreasing_mask = V == np.minimum.accumulate(V)
-    Qd, T, V, t = multiple_array_indexing(v_decreasing_mask, Qd, T, V, t, drop_warning=True)
+    v_decreasing_mask = V_savgol == np.minimum.accumulate(V_savgol)
+    Qd, T, V, t = multiple_array_indexing(v_decreasing_mask, Qd, T, V_savgol, t, drop_warning=True)
     
     # #check_outliers(Qd=Qd, T=T, V=V, t=t)
     # if outlier_dict:  # If V was an outlier before, check out the result
