@@ -125,23 +125,24 @@ def drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t, t_diff_outlier_thresh=1
         Tuple of numpy.ndarray  -- Returns the original values of Qd, T, V and t if no t-outlier is found, or
             a slice of all arrays if the only outlier lays right after the end of discharging.
     """
-    if outlier_dict.get("t"):
-        t_outlier_mask = outlier_dict["t"]["diff_values"] > t_diff_outlier_thresh
-        if np.any(t_outlier_mask):  # Only do something if there are big outliers.
-            # If the big t outlier is right at the end if discharging, the whole cycle should be dropped.
-            indeces_before_t_outliers = outlier_dict["t"]["outlier_indeces"][t_outlier_mask] - 1  # Get the indeces 1 before the t outliers.
-            V_before_t_outlier = np.min(V[indeces_before_t_outliers])  # Get the minimum V value right before all t outliers.
-            
-            # If there is excatly one t outlier right at the end of discharging, drop all values after this index and continue with processing.
-            if indeces_before_t_outliers.size == 1 and V_before_t_outlier < 2.01:
-                i = int(indeces_before_t_outliers) + 1
-                return Qd[:i], T[:i], V[:i], t[:i]
-            else:
-                raise OutlierException(
-                    "Dropping cycle based on t outliers > {} with value(s) {}".format(
+    t_outlier_mask = outlier_dict["t"]["diff_values"] > t_diff_outlier_thresh
+    if np.any(t_outlier_mask):  # Only do something if there are big outliers.
+        # If the big t outlier is right at the end if discharging, the whole cycle should be dropped.
+        indeces_before_t_outliers = outlier_dict["t"]["outlier_indeces"][t_outlier_mask] - 1  # Get the indeces 1 before the t outliers.
+        V_before_t_outlier = np.min(V[indeces_before_t_outliers])  # Get the minimum V value right before all t outliers.
+        
+        # If there is excatly one t outlier right at the end of discharging, drop all values after this index and continue with processing.
+        if indeces_before_t_outliers.size == 1 and V_before_t_outlier < 2.01:
+            i = int(indeces_before_t_outliers) + 1
+            return Qd[:i], T[:i], V[:i], t[:i]
+        else:
+            raise OutlierException(
+                "Dropping cycle based on t outliers > {} with value(s) {}".format(
+                    t_diff_outlier_thresh,                    
                         t_diff_outlier_thresh,                    
-                        list(outlier_dict["t"]["diff_values"][t_outlier_mask])),
-                    outlier_dict)
+                    t_diff_outlier_thresh,                    
+                    list(outlier_dict["t"]["diff_values"][t_outlier_mask])),
+                outlier_dict)
     else:
         return Qd, T, V, t
 
@@ -226,7 +227,8 @@ def preprocess_cycle(
 
     
     outlier_dict = check_outliers(std_multiple_threshold=15, Qd=Qd, T=T, V=V, t=t)
-    Qd, T, V, t = drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t)
+    if outlier_dict.get("t"):  # If any outliert was found in t
+        Qd, T, V, t = drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t)
     
     outlier_dict = check_outliers(std_multiple_threshold=15, verbose=True, Qd=Qd, T=T, V=V, t=t)
     
