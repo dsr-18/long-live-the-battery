@@ -44,6 +44,14 @@ def multiple_array_indexing(valid_numpy_index, *args, drop_warning=False, drop_w
 
 
 def outlier_dict_without_mask(outlier_dict):
+    """Modifies an outlier dict for printing purposes by removing the mask. 
+    
+    Arguments:
+        outlier_dict {dict} -- Original outliert dictionary.
+    
+    Returns:
+        dict -- Same outlier dict without the key "outliert_mask"
+    """
     outlier_dict_wo_mask = dict()  # Generate a smaller dict for better printing
     for key in outlier_dict.keys():
         outlier_dict_wo_mask[key] = {k: v for k, v in outlier_dict[key].items() if k != "outlier_mask"}
@@ -56,7 +64,8 @@ def check_outliers(std_multiple_threshold=15, verbose=False, **kwargs):
     std_multiple_threshold times the standard deviation.
     
     Keyword Arguments:
-        std_multiple_threshold {int} -- Threshold that defines an outlier (default: {15})
+        std_multiple_threshold {int} -- Threshold that defines an outlier by multiplying with the
+            standard deveation (default: {15})
         verbose {bool} -- If True, prints the values for every found outlier (default: {False})
     
     Returns:
@@ -387,7 +396,6 @@ def main():
     batch1 = load_batches_to_dict(amount_to_load=1)    
 
     results, cycles_drop_info = preprocess_batch(batch1, return_original_data=True, return_cycle_drop_info=True, verbose=True)
-    # TODO: cycles_drop_info looks weird..
     pprint(cycles_drop_info)
     print("Done!")
 
