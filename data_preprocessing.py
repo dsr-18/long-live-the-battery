@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.interpolate import interp1d
+from scipy.signal import savgol_filter
 from plotly import tools
 import plotly.offline as pyo
 import plotly.graph_objs as go
@@ -137,7 +138,9 @@ def drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t, t_diff_outlier_thresh=1
                 return Qd[:i], T[:i], V[:i], t[:i]
             else:
                 raise OutlierException(
-                    "Dropping cycle based on t outliers with value(s) {}".format(list(outlier_dict["t"]["diff_values"][t_outlier_mask])),
+                    "Dropping cycle based on t outliers > {} with value(s) {}".format(
+                        t_diff_outlier_thresh,                    
+                        list(outlier_dict["t"]["diff_values"][t_outlier_mask])),
                     outlier_dict)
     else:
         return Qd, T, V, t
@@ -210,30 +213,25 @@ def preprocess_cycle(
     t = cycle["t"]
     
     ## Only take the measurements during high current discharging.
-    high_current_discharge = I < I_thresh
-    Qd, T, V, t = multiple_array_indexing(high_current_discharge, Qd, T, V, t)
+    high_current_discharge_mask = I < I_thresh
+    Qd, T, V, t = multiple_array_indexing(high_current_discharge_mask, Qd, T, V, t)
     
     ## Sort all values after time.
-    sort_indeces = t.argsort()
-    Qd, T, V, t = multiple_array_indexing(sort_indeces, Qd, T, V, t)
+    sorted_indeces = t.argsort()
+    Qd, T, V, t = multiple_array_indexing(sorted_indeces, Qd, T, V, t)
     
     ## Only take timesteps where time is strictly increasing.
-    increasing_time = np.diff(t, prepend=0) > 0
-    Qd, T, V, t = multiple_array_indexing(increasing_time, Qd, T, V, t)
+    increasing_time_mask = np.diff(t, prepend=0) > 0
+    Qd, T, V, t = multiple_array_indexing(increasing_time_mask, Qd, T, V, t)
 
-    ## Only take the measurements, where V is monotonically decreasing (needed for interpolation).
-    # This is done by comparing V to the accumulated minimum of V.
-    #    accumulated minimum --> (taking always the smallest seen value from V from left to right)
     
-    outlier_dict = check_outliers(std_multiple_threshold=15, verbose=True, Qd=Qd, T=T, V=V, t=t)
+    outlier_dict = check_outliers(std_multiple_threshold=15, Qd=Qd, T=T, V=V, t=t)
     Qd, T, V, t = drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t)
     
+    outlier_dict = check_outliers(std_multiple_threshold=15, verbose=True, Qd=Qd, T=T, V=V, t=t)
+    
     # TODO: Check with new threshold after processing outliers of std >= 15
-    
-    # TODO: Counting all outliers for potential dropping.
-    
-    # keep cycle life the same
-    
+        
     # if outlier_dict:  # If V was an outlier before, check out the result
     #     debug_plot(Qd, T, V, t)
     
@@ -241,9 +239,17 @@ def preprocess_cycle(
     # if outlier_dict.get("t"):  # If an outlier was found, then calculate new discharge time.
     #     not_t_outliers = ~outlier_dict["t"]["outlier_mask"]
     #     high_current_discharging_time = np.sum(np.diff(t, prepend=t[0])[not_t_outliers])  # Only sum the diff values, that aren't a diff outlier.
+    
+    # Apply savitzky golay filter to V to smooth out the values.
+    # This is done in order to not drop too many values in the next processing step (make monotonically decreasing).
+    # This way the resulting curves don't become skewed in the direction of smaller values.
+    V = savgol_filter(V, window_length=25, polyorder=2)
         
-    v_decreasing = V == np.minimum.accumulate(V)
-    Qd, T, V, t = multiple_array_indexing(v_decreasing, Qd, T, V, t, drop_warning=True)
+    ## Only take the measurements, where V is monotonically decreasing (needed for interpolation).
+    # This is done by comparing V to the accumulated minimum of V.
+    #    accumulated minimum --> (taking always the smallest seen value from V from left to right)
+    v_decreasing_mask = V == np.minimum.accumulate(V)
+    Qd, T, V, t = multiple_array_indexing(v_decreasing_mask, Qd, T, V, t, drop_warning=True)
     
     # #check_outliers(Qd=Qd, T=T, V=V, t=t)
     # if outlier_dict:  # If V was an outlier before, check out the result
@@ -433,7 +439,7 @@ def plot_preprocessing_results(cycle_results_dict, inline=True):
 def main():
     from rebuilding_features import load_batches_to_dict
     
-    batch1 = load_batches_to_dict(amount_to_load=1)    
+    batch1 = load_batches_to_dict(amount_to_load=2)    
 
     results, cycles_drop_info = preprocess_batch(batch1, return_original_data=True, return_cycle_drop_info=True, verbose=True)
     pprint(cycles_drop_info)
