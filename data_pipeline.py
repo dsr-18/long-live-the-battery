@@ -62,7 +62,7 @@ def parse_features(example_proto):
     from these columns with tensorflow.feature_columns.make_parse_example_spec().
     """
     feature_description = {
-        'IR': tf.io.FixedLenFeature([], tf.float32),
+        'IR': tf.io.FixedLenFeature([1, ], tf.float32),
         'Tdlin': tf.io.FixedLenFeature([1000, 1], tf.float32),
         'Qdlin': tf.io.FixedLenFeature([1000, 1], tf.float32),
         'Remaining_cycles': tf.io.FixedLenFeature([], tf.int64),
