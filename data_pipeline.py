@@ -50,11 +50,16 @@ def write_to_tfrecords(batteries, data_dir="Data/tfrecords/"):
         print("Created %s.tfrecords file." % cell_name)
 
 
-def get_example_spec():
+def parse_features(example_proto):
     """
-    Define the schema/specifications to read from TFRecords. This could also be done
-    by declaring feature columns and parsing the schema from these with
-    tensorflow.feature_columns.make_parse_example_spec().
+    The parse_features function takes an example and converts it from binary/message format
+    into a more readable format. The example spec is a a feature mapping
+    based on the columns we defined. To be able to feed the dataset directly into a
+    Tensorflow model later on, we split the data into examples and targets (i.e. X and y).
+
+    The feature_description defines the schema/specifications to read from TFRecords.
+    This could also be done by declaring feature columns and parsing the schema
+    from these columns with tensorflow.feature_columns.make_parse_example_spec().
     """
     feature_description = {
         'IR': tf.io.FixedLenFeature([], tf.float32),
@@ -62,21 +67,9 @@ def get_example_spec():
         'Qdlin': tf.io.FixedLenFeature([1000, 1], tf.float32),
         'Remaining_cycles': tf.io.FixedLenFeature([], tf.int64),
     }
-    return feature_description
-
-
-def get_parse_features(example_spec):
-    def parse_features(example_proto):
-        """
-        The parse_features function takes an example and converts it from binary/message format
-        into a more readable format. The example spec is a a feature mapping
-        based on the columns we defined. To be able to feed the dataset directly into a
-        Tensorflow model later on, we split the data into examples and targets (i.e. X and y).
-        """
-        examples = tf.io.parse_single_example(example_proto, example_spec)
-        targets = examples.pop("Remaining_cycles")
-        return examples, targets
-    return parse_features
+    examples = tf.io.parse_single_example(example_proto, feature_description)
+    targets = examples.pop("Remaining_cycles")
+    return examples, targets
 
 
 def get_flatten_windows(window_size):
@@ -102,9 +95,8 @@ def create_cell_dataset_from_tfrecords(file, window_size=5, shift=1, stride=1, b
     multiple examples at the same time, then shuffles the batches. It is important
     that we batch before shuffling, so the examples within the batches stay in order.
     """
-    example_spec = get_example_spec()
     dataset = tf.data.TFRecordDataset(file).skip(1)  # skip should be removed when we have clean data
-    dataset = dataset.map(get_parse_features(example_spec))
+    dataset = dataset.map(parse_features)
     dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=True)
     dataset = dataset.flat_map(get_flatten_windows(window_size))
     dataset = dataset.batch(batch_size)
