@@ -1,5 +1,5 @@
 import os
-
+import glob
 from tensorflow.train import FloatList, Int64List, Feature, Features, Example
 import tensorflow as tf
 
@@ -53,13 +53,12 @@ def write_to_tfrecords(batteries, data_dir="Data/tfrecords/"):
 def parse_features(example_proto):
     """
     The parse_features function takes an example and converts it from binary/message format
-    into a more readable format. The example spec is a a feature mapping
-    based on the columns we defined. To be able to feed the dataset directly into a
+    into a more readable format. To be able to feed the dataset directly into a
     Tensorflow model later on, we split the data into examples and targets (i.e. X and y).
 
     The feature_description defines the schema/specifications to read from TFRecords.
     This could also be done by declaring feature columns and parsing the schema
-    from these columns with tensorflow.feature_columns.make_parse_example_spec().
+    with tensorflow.feature_columns.make_parse_example_spec().
     """
     feature_description = {
         'IR': tf.io.FixedLenFeature([1, ], tf.float32),
@@ -74,48 +73,66 @@ def parse_features(example_proto):
 
 def get_flatten_windows(window_size):
     def flatten_windows(features, target):
+        """
+        Calling .window() on our dataset created a dataset of type "VariantDataset"
+        for every feature in our main dataset. We need to flatten
+        these VariantDatasets before we can feed everything to a model.
+        Because the VariantDataset are modeled after windows, they have
+        length=window_size.
+        """
+        # Select all rows for each feature
         qdlin = features["Qdlin"].batch(window_size)
         tdlin = features["Tdlin"].batch(window_size)
         ir = features["IR"].batch(window_size)
+        # the names in this dict have to match the names of the Input objects in
+        # our final model
         features_flat = {
             "Qdlin": qdlin,
             "Tdlin": tdlin,
             "IR": ir
         }
+        # For every window we want to have one target/label
+        # so we only get the last row by skipping all but one row
         target_flat = target.skip(window_size-1)
         return tf.data.Dataset.zip((features_flat, target_flat))
     return flatten_windows
 
 
-def create_cell_dataset_from_tfrecords(file, window_size=5, shift=1, stride=1, batch_size=10):
-    """
-    The read_tfrecords() function reads a file, skipping the first row which in our case
-    is 0/NaN most of the time. It then loops over each example/row in the dataset and
-    calls the parse_feature function. Then it batches the dataset, so it always feeds
-    multiple examples at the same time, then shuffles the batches. It is important
-    that we batch before shuffling, so the examples within the batches stay in order.
-    """
-    dataset = tf.data.TFRecordDataset(file).skip(1)  # skip should be removed when we have clean data
-    dataset = dataset.map(parse_features)
-    dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=True)
-    dataset = dataset.flat_map(get_flatten_windows(window_size))
-    dataset = dataset.batch(batch_size)
-    return dataset
+def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_remainder, batch_size, shuffle):
+    def create_cell_dataset_from_tfrecords(file):
+        """
+        The read_tfrecords() function reads a file, skipping the first row which in our case
+        is 0/NaN most of the time. It then loops over each example/row in the dataset and
+        calls the parse_feature function. Then it batches the dataset, so it always feeds
+        multiple examples at the same time, then shuffles the batches. It is important
+        that we batch before shuffling, so the examples within the batches stay in order.
+        """
+        dataset = tf.data.TFRecordDataset(file).skip(1)  # .skip() should be removed when we have clean data
+        dataset = dataset.map(parse_features)
+        dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=drop_remainder)
+        dataset = dataset.flat_map(get_flatten_windows(window_size))
+        dataset = dataset.batch(batch_size)
+        if shuffle:
+            dataset = dataset.shuffle(1000)
+        return dataset
+    return create_cell_dataset_from_tfrecords
 
 
-def create_dataset(data_dir="Data/tfrecords/", cycle_length=4, num_parallel_calls=4):
+def create_dataset(data_dir="Data/tfrecords/", cycle_length=4, num_parallel_calls=4,
+                   window_size=5, shift=1, stride=1, drop_remainder=True, batch_size=10, shuffle=True):
     """
     The interleave() method will create a dataset that pulls 4 (=cycle_length) file paths from the
-    filepath_dataset and for each one calls the function "read_tfrecords". It will then
+    filepath_dataset and for each one calls the function "read_tfrecords()". It will then
     cycle through these 4 datasets, reading one line at a time from each until all datasets
     are out of items. Then it gets the next 4 file paths from the filepath_dataset and
     interleaves them the same way, and so on until it runs out of file paths.
-    Note: Even with parallel calls specified, data within batches is still sequential.
+    Note: Even with parallel calls specified, data within batches is sequential.
     """
-    filenames = os.listdir(data_dir)
-    filepaths = [os.path.join(data_dir + filename) for filename in filenames]
+    filepaths = glob.glob(os.path.join(data_dir + "*.tfrecord"))
     filepath_dataset = tf.data.Dataset.list_files(filepaths)
-    assembled_dataset = filepath_dataset.interleave(create_cell_dataset_from_tfrecords,
+    assembled_dataset = filepath_dataset.interleave(get_create_cell_dataset_from_tfrecords(window_size, shift, stride,
+                                                                                           drop_remainder,
+                                                                                           batch_size, shuffle),
                                                     cycle_length=cycle_length,
                                                     num_parallel_calls=num_parallel_calls)
     assembled_dataset = assembled_dataset.shuffle(1000)
