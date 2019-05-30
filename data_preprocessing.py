@@ -312,7 +312,10 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
     """
     batch_results = dict()
     cycles_drop_info = dict()
+    
     for cell_key, cell_value in batch_dict.items():
+        
+        # Initialite the cell results with all available scalar values.
         batch_results[cell_key] = dict(
             cycle_life=cell_value["cycle_life"][0][0],
             summary=dict(
@@ -323,12 +326,26 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
             ),
             cycles=dict()
         )
+        
         for cycle_key, cycle_value in cell_value["cycles"].items():
-            if cycle_key == '0':  # Has to be skipped since there are often times only two measurements.
+            # Has to be skipped since there are often times only two measurements.
+            if cycle_key == '0':
                 continue
+            # Some cells have more cycle measurements than recorded cycle_life.
+            # The reamining cycles will be dropped.
+            elif int(cycle_key) >  int(cell_value["cycle_life"][0][0]):
+                print("Cell {} has more cycles than cycle_life ({}): Dropping remaining cycles {} to {}"\
+                      .format(cell_key,
+                              cell_value["cycle_life"][0][0],
+                              cycle_key,
+                              max([int(k) for k in cell_value["cycles"].keys()])))
+                break
+            
+            # Start processing the cycle.
             try:
                 cycle_results = preprocess_cycle(cycle_value, return_original_data=return_original_data)
-            except OutlierException as oe:
+            except OutlierException as oe:  # Can be raised if preprocess_cycle, if an outlier is found.
+                print("cell:", cell_key, " cycle:", cycle_key)
                 print(oe)
                 drop_info = {
                     cell_key: {
@@ -336,9 +353,14 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
                 cycles_drop_info.update(drop_info)
                 continue
             
+            # Write the calculated discharge time into the initialized array.
+            # This is the only scalar results from preprocess_cycle
             batch_results[cell_key]["summary"]["high_current_discharging_time"][int(cycle_key)-1] = \
                 cycle_results.pop("high_current_discharging_time")
+            
+            # Write the results to the correct cycle key.
             batch_results[cell_key]["cycles"][cycle_key] = cycle_results
+        
         if verbose:
             print("Processed", cell_key)
     
