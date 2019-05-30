@@ -103,7 +103,7 @@ def debug_plot(Qd, T, V, t):
     simple_plotly(T, V=V)
 
 
-def drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t):
+def drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t, t_diff_outlier_thresh=100):
     """Checks for big outliers in the np.diff() values of t. If any are found the whole cyce is dropped.
     Only exception: There is only one outlier which lays right after the end of discharging.
     In this case, all measurement values of Qd, T, V and t after this outlier are dropped and their values returned.
@@ -125,7 +125,7 @@ def drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t):
             a slice of all arrays if the only outlier lays right after the end of discharging.
     """
     if outlier_dict.get("t"):
-        t_outlier_mask = outlier_dict["t"]["diff_values"] > 100
+        t_outlier_mask = outlier_dict["t"]["diff_values"] > t_diff_outlier_thresh
         if np.any(t_outlier_mask):  # Only do something if there are big outliers.
             # If the big t outlier is right at the end if discharging, the whole cycle should be dropped.
             indeces_before_t_outliers = outlier_dict["t"]["outlier_indeces"][t_outlier_mask] - 1  # Get the indeces 1 before the t outliers.
