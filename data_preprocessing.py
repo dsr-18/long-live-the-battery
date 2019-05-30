@@ -52,7 +52,7 @@ def outlier_dict_without_mask(outlier_dict):
     Returns:
         dict -- Same outlier dict without the key "outliert_mask"
     """
-    outlier_dict_wo_mask = dict()  # Generate a smaller dict for better printing
+    outlier_dict_wo_mask = dict()
     for key in outlier_dict.keys():
         outlier_dict_wo_mask[key] = {k: v for k, v in outlier_dict[key].items() if k != "outlier_mask"}
     return outlier_dict_wo_mask
@@ -94,6 +94,7 @@ def check_outliers(std_multiple_threshold=15, verbose=False, **kwargs):
         pprint(outlier_dict_wo_mask)
     return outlier_dict
 
+
 def debug_plot(Qd, T, V, t):
     from generic_helpers import simple_plotly
     sample_space = np.arange(len(V))
@@ -103,6 +104,26 @@ def debug_plot(Qd, T, V, t):
 
 
 def drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t):
+    """Checks for big outliers in the np.diff() values of t. If any are found the whole cyce is dropped.
+    Only exception: There is only one outlier which lays right after the end of discharging.
+    In this case, all measurement values of Qd, T, V and t after this outlier are dropped and their values returned.
+    
+    The end of discharging is defined as a V value below 2.01.
+    
+    Arguments:
+        outlier_dict {dict} -- Dictionary with outlier information for the whole cycle.
+        Qd {numpy.ndarray} -- Qd during discharging
+        T {numpy.ndarray} -- T during discharging
+        V {numpy.ndarray} -- V during discharging
+        t {numpy.ndarray} -- t during discharging
+    
+    Raises:
+        OutlierException: Will be raised, if the whole cycle should be dropped.
+    
+    Returns:
+        Tuple of numpy.ndarray  -- Returns the original values of Qd, T, V and t if no t-outlier is found, or
+            a slice of all arrays if the only outlier lays right after the end of discharging.
+    """
     if outlier_dict.get("t"):
         t_outlier_mask = outlier_dict["t"]["diff_values"] > 100
         if np.any(t_outlier_mask):  # Only do something if there are big outliers.
@@ -206,9 +227,6 @@ def preprocess_cycle(
     
     outlier_dict = check_outliers(std_multiple_threshold=15, verbose=True, Qd=Qd, T=T, V=V, t=t)
     Qd, T, V, t = drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t)
-    
-    # TODO: Drop cycle with big t outlierts EXCEPT when the ONLY outlier is at a point, where V_before_outlier is smaller than 2.01
-        # Maybe check Qd max from before cycle and after.
     
     # TODO: Check with new threshold after processing outliers of std >= 15
     
