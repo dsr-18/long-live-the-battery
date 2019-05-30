@@ -105,11 +105,12 @@ def debug_plot(Qd, T, V, t):
 
 
 def drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t, t_diff_outlier_thresh=100):
-    """Checks for big outliers in the np.diff() values of t. If any are found the whole cyce is dropped.
-    Only exception: There is only one outlier which lays right after the end of discharging.
-    In this case, all measurement values of Qd, T, V and t after this outlier are dropped and their values returned.
+    """Checks for big outliers in the np.diff() values of t.
+    If any are found the whole cyce is dropped, with one exception:
+        There is only one outlier which lays right after the end of discharging.
+        In this case, all measurement values of Qd, T, V and t after this outlier are dropped and their values returned.
     
-    The end of discharging is defined as a V value below 2.01.
+        The end of discharging is defined as a V value below 2.01.
     
     Arguments:
         outlier_dict {dict} -- Dictionary with outlier information for the whole cycle.
@@ -117,29 +118,30 @@ def drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t, t_diff_outlier_thresh=1
         T {numpy.ndarray} -- T during discharging
         V {numpy.ndarray} -- V during discharging
         t {numpy.ndarray} -- t during discharging
+        t_diff_outlier_thresh {int} -- Threshold that defines what a "big" t outliert is
     
     Raises:
         OutlierException: Will be raised, if the whole cycle should be dropped.
     
     Returns:
-        Tuple of numpy.ndarray  -- Returns the original values of Qd, T, V and t if no t-outlier is found, or
+        Tuple of numpy.ndarray  -- Returns the original values of Qd, T, V and t if no big t outlier is found, or
             a slice of all arrays if the only outlier lays right after the end of discharging.
     """
     t_outlier_mask = outlier_dict["t"]["diff_values"] > t_diff_outlier_thresh
     if np.any(t_outlier_mask):  # Only do something if there are big outliers.
-        # If the big t outlier is right at the end if discharging, the whole cycle should be dropped.
-        indeces_before_t_outliers = outlier_dict["t"]["outlier_indeces"][t_outlier_mask] - 1  # Get the indeces 1 before the t outliers.
-        V_before_t_outlier = np.min(V[indeces_before_t_outliers])  # Get the minimum V value right before all t outliers.
+        # Get the indeces 1 before the t outliers.
+        indeces_before_t_outliers = outlier_dict["t"]["outlier_indeces"][t_outlier_mask] - 1
+        # Get the minimum V value right before all t outliers.
+        V_before_t_outlier = np.min(V[indeces_before_t_outliers])
         
-        # If there is excatly one t outlier right at the end of discharging, drop all values after this index and continue with processing.
+        # If there is excatly one t outlier right at the end of discharging,
+        #   drop all values after this index and continue with processing.
         if indeces_before_t_outliers.size == 1 and V_before_t_outlier < 2.01:
             i = int(indeces_before_t_outliers) + 1
             return Qd[:i], T[:i], V[:i], t[:i]
         else:
             raise OutlierException(
-                "Dropping cycle based on t outliers > {} with value(s) {}".format(
-                    t_diff_outlier_thresh,                    
-                        t_diff_outlier_thresh,                    
+                "Dropping cycle based on outliers with np.diff(t) > {} with value(s) {}".format(
                     t_diff_outlier_thresh,                    
                     list(outlier_dict["t"]["diff_values"][t_outlier_mask])),
                 outlier_dict)
