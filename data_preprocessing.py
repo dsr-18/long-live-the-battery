@@ -8,6 +8,10 @@ import warnings
 from pprint import pprint
 
 
+class DropCycleException(Exception):
+    """Used for dropping whole cycles without additional information."""
+    pass
+
 class OutlierException(Exception):
     def __init__(self, message, outlier_dict):
         super().__init__(message)
@@ -246,10 +250,14 @@ def preprocess_cycle(
     
     # Apply savitzky golay filter to V to smooth out the values.
     # This is done in order to not drop too many values in the next processing step (make monotonically decreasing).
-    # This way the resulting curves don't become skewed in the direction of smaller values.
-    V = savgol_filter(V, window_length=25, polyorder=2)
-        
-    ## Only take the measurements, where V is monotonically decreasing (needed for interpolation).
+    # This way the resulting curves don't become skewed too much in the direction of smaller values.
+    savgol_window_length = 25
+    if savgol_window_length >= V.size:
+        raise DropCycleException("""Dropping cycle with less than {} V values.\nSizes --> Qd:{}, T:{}, V:{}, t:{}"""\
+                                 .format(savgol_window_length,Qd.size, T.size, V.size, t.size))
+    V_savgol = savgol_filter(V, window_length=25, polyorder=2)
+
+    # Only take the measurements, where V is monotonically decreasing (needed for interpolation).
     # This is done by comparing V to the accumulated minimum of V.
     #    accumulated minimum --> (taking always the smallest seen value from V from left to right)
     v_decreasing_mask = V == np.minimum.accumulate(V)
@@ -264,6 +272,13 @@ def preprocess_cycle(
 
     # if outlier_dict:  # If V was an outlier before, check out the result
     #     debug_plot(Qd, T, V, t)
+
+    # Calculate discharging time. (Only scalar feature which is returned later)
+    high_current_discharging_time = t.max() - t.min()
+    if high_current_discharging_time < 6:
+        print("Test")
+        raise DropCycleException("Dropping cycle with high_current_discharging_time = {}"\
+                                 .format(high_current_discharging_time))
     
     ## Make interpolation function.
     Qd_interp_func = interp1d(
@@ -354,9 +369,19 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
             # Start processing the cycle.
             try:
                 cycle_results = preprocess_cycle(cycle_value, return_original_data=return_original_data)
+            
+            except DropCycleException as e:
+                print("cell:", cell_key, " cycle:", cycle_key)
+                print(e)
+                # Documenting dropped cell and key
+                drop_info = {cell_key: {cycle_key: None}}
+                cycles_drop_info.update(drop_info)                
+                continue
+            
             except OutlierException as oe:  # Can be raised if preprocess_cycle, if an outlier is found.
                 print("cell:", cell_key, " cycle:", cycle_key)
                 print(oe)
+                # Adding outlier dict from Exception to the cycles_drop_info.
                 drop_info = {
                     cell_key: {
                         cycle_key: outlier_dict_without_mask(oe.outlier_dict) }}
