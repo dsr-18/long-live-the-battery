@@ -347,10 +347,10 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
                 IR = cell_value["summary"]["IR"],
                 QD = cell_value["summary"]["QD"],
                 remaining_cycle_life = cell_value["cycle_life"][0][0] - cell_value["summary"]["cycle"],
-                high_current_discharging_time = np.zeros(int(cell_value["cycle_life"][0][0]))
-            ),
+                high_current_discharging_time = []
+                ),
             cycles=dict()
-        )
+            )
         
         for cycle_key, cycle_value in cell_value["cycles"].items():
             # Has to be skipped since there are often times only two measurements.
@@ -388,16 +388,22 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
                 cycles_drop_info.update(drop_info)
                 continue
             
-            # Write the calculated discharge time into the initialized array.
+            # Append the calculated discharge time.
+            # I tried writing it into an initialized array, but then indeces of dropped cycles get skipped. 
             # This is the only scalar results from preprocess_cycle
-            batch_results[cell_key]["summary"]["high_current_discharging_time"][int(cycle_key)-1] = \
-                cycle_results.pop("high_current_discharging_time")
+            batch_results[cell_key]["summary"]["high_current_discharging_time"].append(
+                cycle_results.pop("high_current_discharging_time"))
             
             # Write the results to the correct cycle key.
             batch_results[cell_key]["cycles"][cycle_key] = cycle_results
         
+        # Convert list of appended values to numpy array.
+        batch_results[cell_key]["summary"]["high_current_discharging_time"] = \
+            np.array(batch_results[cell_key]["summary"]["high_current_discharging_time"])
+        
         if verbose:
-            print("Processed", cell_key)
+            print(cell_key, "done")
+    
     
     cycles_drop_info["number_distinct_cells"] = len(cycles_drop_info)
     cycles_drop_info["number_distinct_cycles"] = sum([len(value) for key, value in cycles_drop_info.items()
