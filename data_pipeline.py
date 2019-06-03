@@ -45,9 +45,9 @@ def get_preprocessed_cycle_example(cell, idx):
     return cycle_example
 
 
-def write_to_tfrecords(batteries, data_dir="Data/tfrecords/"):
+def write_to_tfrecords(batteries, data_dir="Data/tfrecords/", preprocessed=True):
     """
-    Takes pickled battery data as input. Use "load_batches_to_dict()" from
+    Takes battery data in dict format as input. Use "load_batches_to_dict()" from
     the "rebuilding_features.py" module to load the battery data.
 
     1. "get_cycle_features()" fetches all features and targets from
@@ -68,7 +68,10 @@ def write_to_tfrecords(batteries, data_dir="Data/tfrecords/"):
         filename = os.path.join(data_dir + cell_name + ".tfrecord")
         with tf.io.TFRecordWriter(filename) as f:
             for cycle_idx in cell_data["summary"]["cycle"]:
-                cycle_to_write = get_preprocessed_cycle_example(cell_data, int(cycle_idx))
+                if preprocessed:
+                    cycle_to_write = get_preprocessed_cycle_example(cell_data, int(cycle_idx))
+                else:
+                    cycle_to_write = get_cycle_example(cell_data, int(cycle_idx))
                 f.write(cycle_to_write.SerializeToString())
         print("Created %s.tfrecords file." % cell_name)
 
@@ -96,7 +99,7 @@ def parse_features(example_proto):
 
 def parse_preprocessed_features(example_proto):
     """
-    Same as above but with preprocessed features.
+    Same as above, but with preprocessed features.
     """
     feature_description = {
         'IR': tf.io.FixedLenFeature([1, ], tf.float32),
@@ -140,7 +143,7 @@ def get_flatten_windows(window_size):
 def get_prep_flatten_windows(window_size):
     def prep_flatten_windows(features, target):
         """
-        Same as above but with the preprocessed data.
+        Same as above, but with the preprocessed data.
         """
         # Select all rows for each feature
         qdlin = features["Qdlin"].batch(window_size)
@@ -162,7 +165,8 @@ def get_prep_flatten_windows(window_size):
     return prep_flatten_windows
 
 
-def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_remainder, batch_size, shuffle):
+def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_remainder, batch_size, shuffle,
+                                           preprocessed=True):
     def create_cell_dataset_from_tfrecords(file):
         """
         The read_tfrecords() function reads a file, skipping the first row which in our case
@@ -171,10 +175,16 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
         multiple examples at the same time, then shuffles the batches. It is important
         that we batch before shuffling, so the examples within the batches stay in order.
         """
-        dataset = tf.data.TFRecordDataset(file).skip(1)  # .skip() should be removed when we have clean data
-        dataset = dataset.map(parse_preprocessed_features)
-        dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=drop_remainder)
-        dataset = dataset.flat_map(get_prep_flatten_windows(window_size))
+        if preprocessed:
+            dataset = tf.data.TFRecordDataset(file)
+            dataset = dataset.map(parse_preprocessed_features)
+            dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=drop_remainder)
+            dataset = dataset.flat_map(get_prep_flatten_windows(window_size))
+        else:
+            dataset = tf.data.TFRecordDataset(file).skip(1)
+            dataset = dataset.map(parse_features)
+            dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=drop_remainder)
+            dataset = dataset.flat_map(get_flatten_windows(window_size))
         dataset = dataset.batch(batch_size)
         if shuffle:
             dataset = dataset.shuffle(1000)
@@ -183,7 +193,8 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
 
 
 def create_dataset(data_dir="Data/tfrecords/", cycle_length=4, num_parallel_calls=4,
-                   window_size=5, shift=1, stride=1, drop_remainder=True, batch_size=10, shuffle=True):
+                   window_size=5, shift=1, stride=1, drop_remainder=True, batch_size=10, shuffle=True,
+                   preprocessed=True):
     """
     The interleave() method will create a dataset that pulls 4 (=cycle_length) file paths from the
     filepath_dataset and for each one calls the function "read_tfrecords()". It will then
@@ -196,7 +207,8 @@ def create_dataset(data_dir="Data/tfrecords/", cycle_length=4, num_parallel_call
     filepath_dataset = tf.data.Dataset.list_files(filepaths)
     assembled_dataset = filepath_dataset.interleave(get_create_cell_dataset_from_tfrecords(window_size, shift, stride,
                                                                                            drop_remainder,
-                                                                                           batch_size, shuffle),
+                                                                                           batch_size, shuffle,
+                                                                                           preprocessed),
                                                     cycle_length=cycle_length,
                                                     num_parallel_calls=num_parallel_calls)
     assembled_dataset = assembled_dataset.shuffle(1000)
