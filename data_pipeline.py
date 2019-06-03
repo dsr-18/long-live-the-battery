@@ -22,6 +22,29 @@ def get_cycle_example(cell, idx):
     return cycle_example
 
 
+def get_preprocessed_cycle_example(cell, idx):
+    """
+    Same as above, but with the preprocessed data
+    """
+    cycle_example = Example(
+        features=Features(
+            feature={
+                "IR":
+                    Feature(float_list=FloatList(value=[cell["summary"]["IR"][idx]])),
+                "Remaining_cycles":
+                    Feature(int64_list=Int64List(value=[cell["summary"]["remaining_cycle_life"][idx]])),
+                "Discharge_time":
+                    Feature(float_list=FloatList(value=[cell["summary"]["high_current_discharging_time"][idx]])),
+                "Qdlin":
+                    Feature(float_list=FloatList(value=cell["cycles"][str(idx)]["Qd_resample"])),
+                "Tdlin":
+                    Feature(float_list=FloatList(value=cell["cycles"][str(idx)]["T_resample"]))
+            }
+        )
+    )
+    return cycle_example
+
+
 def write_to_tfrecords(batteries, data_dir="Data/tfrecords/"):
     """
     Takes pickled battery data as input. Use "load_batches_to_dict()" from
@@ -45,7 +68,7 @@ def write_to_tfrecords(batteries, data_dir="Data/tfrecords/"):
         filename = os.path.join(data_dir + cell_name + ".tfrecord")
         with tf.io.TFRecordWriter(filename) as f:
             for cycle_idx in cell_data["summary"]["cycle"]:
-                cycle_to_write = get_cycle_example(cell_data, int(cycle_idx))
+                cycle_to_write = get_preprocessed_cycle_example(cell_data, int(cycle_idx))
                 f.write(cycle_to_write.SerializeToString())
         print("Created %s.tfrecords file." % cell_name)
 
@@ -64,7 +87,23 @@ def parse_features(example_proto):
         'IR': tf.io.FixedLenFeature([1, ], tf.float32),
         'Tdlin': tf.io.FixedLenFeature([1000, 1], tf.float32),
         'Qdlin': tf.io.FixedLenFeature([1000, 1], tf.float32),
+        'Remaining_cycles': tf.io.FixedLenFeature([], tf.int64)
+    }
+    examples = tf.io.parse_single_example(example_proto, feature_description)
+    targets = examples.pop("Remaining_cycles")
+    return examples, targets
+
+
+def parse_preprocessed_features(example_proto):
+    """
+    Same as above but with preprocessed features.
+    """
+    feature_description = {
+        'IR': tf.io.FixedLenFeature([1, ], tf.float32),
+        'Discharge_time': tf.io.FixedLenFeature([1, ], tf.float32),
         'Remaining_cycles': tf.io.FixedLenFeature([], tf.int64),
+        'Tdlin': tf.io.FixedLenFeature([1000, 1], tf.float32),
+        'Qdlin': tf.io.FixedLenFeature([1000, 1], tf.float32)
     }
     examples = tf.io.parse_single_example(example_proto, feature_description)
     targets = examples.pop("Remaining_cycles")
@@ -98,6 +137,31 @@ def get_flatten_windows(window_size):
     return flatten_windows
 
 
+def get_prep_flatten_windows(window_size):
+    def prep_flatten_windows(features, target):
+        """
+        Same as above but with the preprocessed data.
+        """
+        # Select all rows for each feature
+        qdlin = features["Qdlin"].batch(window_size)
+        tdlin = features["Tdlin"].batch(window_size)
+        ir = features["IR"].batch(window_size)
+        dc_time = features["Discharge_time"].batch(window_size)
+        # the names in this dict have to match the names of the Input objects in
+        # our final model
+        features_flat = {
+            "Qdlin": qdlin,
+            "Tdlin": tdlin,
+            "IR": ir,
+            "Discharge_time": dc_time
+        }
+        # For every window we want to have one target/label
+        # so we only get the last row by skipping all but one row
+        target_flat = target.skip(window_size-1)
+        return tf.data.Dataset.zip((features_flat, target_flat))
+    return prep_flatten_windows
+
+
 def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_remainder, batch_size, shuffle):
     def create_cell_dataset_from_tfrecords(file):
         """
@@ -108,9 +172,9 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
         that we batch before shuffling, so the examples within the batches stay in order.
         """
         dataset = tf.data.TFRecordDataset(file).skip(1)  # .skip() should be removed when we have clean data
-        dataset = dataset.map(parse_features)
+        dataset = dataset.map(parse_preprocessed_features)
         dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=drop_remainder)
-        dataset = dataset.flat_map(get_flatten_windows(window_size))
+        dataset = dataset.flat_map(get_prep_flatten_windows(window_size))
         dataset = dataset.batch(batch_size)
         if shuffle:
             dataset = dataset.shuffle(1000)
