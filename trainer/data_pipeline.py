@@ -3,6 +3,7 @@ import glob
 from tensorflow.train import FloatList, Int64List, Feature, Features, Example
 import tensorflow as tf
 
+TFR_DIR = "../data/tfrecords/"
 
 def get_cycle_example(cell, idx):
     """
@@ -22,7 +23,7 @@ def get_cycle_example(cell, idx):
     return cycle_example
 
 
-def write_to_tfrecords(batteries, data_dir="Data/tfrecords/"):
+def write_to_tfrecords(batteries, data_dir=TFR_DIR):
     """
     Takes pickled battery data as input. Use "load_batches_to_dict()" from
     the "rebuilding_features.py" module to load the battery data.
@@ -118,7 +119,7 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
     return create_cell_dataset_from_tfrecords
 
 
-def create_dataset(data_dir="Data/tfrecords/", cycle_length=4, num_parallel_calls=4,
+def create_dataset(data_dir=TFR_DIR, cycle_length=4, num_parallel_calls=4,
                    window_size=5, shift=1, stride=1, drop_remainder=True, batch_size=10, shuffle=True):
     """
     The interleave() method will create a dataset that pulls 4 (=cycle_length) file paths from the
