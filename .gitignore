@@ -1,5 +1,5 @@
 #ignore data folder
-Data/
+data/
 
 #ignore Matlab files
 *.asv
