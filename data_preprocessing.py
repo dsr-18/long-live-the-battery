@@ -397,9 +397,9 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
         batch_results[cell_key] = dict(
             cycle_life=cell_value["cycle_life"][0][0],
             summary=dict(
-                IR = cell_value["summary"]["IR"],
-                QD = cell_value["summary"]["QD"],
-                remaining_cycle_life = cell_value["cycle_life"][0][0] - cell_value["summary"]["cycle"],
+                IR = [],
+                QD = [],
+                remaining_cycle_life = [],
                 high_current_discharging_time = []
                 ),
             cycles=dict()
@@ -412,7 +412,7 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
             # Some cells have more cycle measurements than recorded cycle_life.
             # The reamining cycles will be dropped.
             elif int(cycle_key) >  int(cell_value["cycle_life"][0][0]):
-                print("Cell {} has more cycles than cycle_life ({}): Dropping remaining cycles {} to {}"\
+                print("    Cell {} has more cycles than cycle_life ({}): Dropping remaining cycles {} to {}"\
                       .format(cell_key,
                               cell_value["cycle_life"][0][0],
                               cycle_key,
@@ -426,6 +426,7 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
             except DropCycleException as e:
                 print("cell:", cell_key, " cycle:", cycle_key)
                 print(e)
+                print("")
                 # Documenting dropped cell and key
                 drop_info = {cell_key: {cycle_key: None}}
                 cycles_drop_info.update(drop_info)                
@@ -434,6 +435,7 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
             except OutlierException as oe:  # Can be raised if preprocess_cycle, if an outlier is found.
                 print("cell:", cell_key, " cycle:", cycle_key)
                 print(oe)
+                print("")
                 # Adding outlier dict from Exception to the cycles_drop_info.
                 drop_info = {
                     cell_key: {
@@ -441,8 +443,13 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
                 cycles_drop_info.update(drop_info)
                 continue
             
-            # Append the calculated discharge time.
+            # Copy summary values for this cycle into the results. 
             # I tried writing it into an initialized array, but then indeces of dropped cycles get skipped. 
+            batch_results[cell_key]["summary"]["IR"].append(cell_value["summary"]["IR"][int(cycle_key)])
+            batch_results[cell_key]["summary"]["QD"].append(cell_value["summary"]["QD"][int(cycle_key)])
+            batch_results[cell_key]["summary"]["remaining_cycle_life"].append(cell_value["cycle_life"][0][0] - int(cycle_key))
+            
+            # Append the calculated discharge time.
             # This is the only scalar results from preprocess_cycle
             batch_results[cell_key]["summary"]["high_current_discharging_time"].append(
                 cycle_results.pop("high_current_discharging_time"))
@@ -450,9 +457,9 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
             # Write the results to the correct cycle key.
             batch_results[cell_key]["cycles"][cycle_key] = cycle_results
         
-        # Convert list of appended values to numpy array.
-        batch_results[cell_key]["summary"]["high_current_discharging_time"] = \
-            np.array(batch_results[cell_key]["summary"]["high_current_discharging_time"])
+        # Convert lists of appended values to numpy arrays.
+        for k, v in batch_results[cell_key]["summary"].items():
+            batch_results[cell_key]["summary"][k] = np.array(v)
         
         if verbose:
             print(cell_key, "done")
