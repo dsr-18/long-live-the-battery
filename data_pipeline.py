@@ -2,12 +2,13 @@ import os
 import glob
 from tensorflow.train import FloatList, Int64List, Feature, Features, Example
 import tensorflow as tf
+import pickle
 
 
 def get_cycle_example(cell, idx):
     """
-    Define the columns that should be written to tfrecords and format the raw data
-    which comes in a dictionary-like format from pickled battery files.
+    Define the columns that should be written to tfrecords and converts the raw data
+    to "Example" objects. Every Example contains data from one charging cycle.
     """
     cycle_example = Example(
         features=Features(
@@ -45,35 +46,58 @@ def get_preprocessed_cycle_example(cell, idx):
     return cycle_example
 
 
-def write_to_tfrecords(batteries, data_dir="Data/tfrecords/", preprocessed=True):
+def write_to_tfrecords(batteries, data_dir="Data/tfrecords/", preprocessed=True, train_test_split=None):
     """
-    Takes battery data in dict format as input. Use "load_batches_to_dict()" from
-    the "rebuilding_features.py" module to load the battery data.
+    Takes battery data in dict format as input and writes a set of tfrecords files to disk.
 
-    1. "get_cycle_features()" fetches all features and targets from
-    the battery data and converts to "Example" objects. Every Example contains
-    data from one charging cycle.
+    To load the preprocessed battery data that was used to train the model, you can use
+    "load_preprocessed_data_to_dict()" from the "data_preprocessing.py" module.
+    To load unprocessed battery data you can use "load_batches_to_dict()" from the
+    "rebuilding_features.py" module and set "preprocessed" to False.
 
-    2. For each cell create a tfrecord file with the naming convention "b1c0.tfrecord".
-    The SerializeToString() method creates binary data out of the Example objects that can
-    be read natively in TensorFlow.
+    A train/test split can be passed as a dictionary with the names of the splits (e.g. "Train") as keys
+    and lists of cell names (e.g. ["b1c3", "b1c4"]) as values. This will create subdirectories for each
+    split.
 
     For more info on TFRecords and Examples see 'Hands-on Machine Learning with
     Scikit-Learn, Keras & TensorFlow', pp.416 (2nd edition, early release)
     """
+    # Create base directory for tfrecords
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
 
-    for cell_name, cell_data in batteries.items():
-        filename = os.path.join(data_dir + cell_name + ".tfrecord")
-        with tf.io.TFRecordWriter(filename) as f:
-            for cycle_idx in cell_data["summary"]["cycle"]:
-                if preprocessed:
-                    cycle_to_write = get_preprocessed_cycle_example(cell_data, int(cycle_idx))
-                else:
-                    cycle_to_write = get_cycle_example(cell_data, int(cycle_idx))
-                f.write(cycle_to_write.SerializeToString())
-        print("Created %s.tfrecords file." % cell_name)
+    if train_test_split is None:
+        # Write all cells into one directory
+        for cell_name, cell_data in batteries.items():
+            write_single_cell(cell_name, cell_data, data_dir, preprocessed)
+    else:
+        # For each split set a new working directory in /Data/tfrecords
+        # and write files there
+        for split_name, split_indexes in train_test_split.items():
+            split_data_dir = os.path.join(data_dir + split_name + "/")
+            # create directories
+            if not os.path.exists(split_data_dir):
+                os.mkdir(split_data_dir)
+            split_batteries = {idx: batteries[idx] for idx in split_indexes}
+            for cell_name, cell_data in split_batteries.items():
+                write_single_cell(cell_name, cell_data, split_data_dir, preprocessed)
+
+
+def write_single_cell(cell_name, cell_data, data_dir, preprocessed):
+    """
+    Takes data for one cell and writes it to a tfrecords file with the naming convention
+    "b1c0.tfrecord". The SerializeToString() method creates binary data out of the
+    Example objects that can be read natively in TensorFlow.
+    """
+    filename = os.path.join(data_dir + cell_name + ".tfrecord")
+    with tf.io.TFRecordWriter(filename) as f:
+        for cycle_idx in cell_data["summary"]["cycle"]:
+            if preprocessed:
+                cycle_to_write = get_preprocessed_cycle_example(cell_data, int(cycle_idx)-1)
+            else:
+                cycle_to_write = get_cycle_example(cell_data, int(cycle_idx)-1)
+            f.write(cycle_to_write.SerializeToString())
+    print("Created %s.tfrecords file." % cell_name)
 
 
 def parse_features(example_proto):
@@ -196,12 +220,18 @@ def create_dataset(data_dir="Data/tfrecords/", cycle_length=4, num_parallel_call
                    window_size=5, shift=1, stride=1, drop_remainder=True, batch_size=10, shuffle=True,
                    preprocessed=True):
     """
-    The interleave() method will create a dataset that pulls 4 (=cycle_length) file paths from the
+    Creates a dataset from all .tfrecord files in the data directory. The dataset will augment the original data by
+    creating windows of loading cycles.
+
+    To load unprocessed data, set "preprocessed" to False.
+
+    Notes about the interleave() method:
+    interleave() will create a dataset that pulls 4 (=cycle_length) file paths from the
     filepath_dataset and for each one calls the function "read_tfrecords()". It will then
     cycle through these 4 datasets, reading one line at a time from each until all datasets
     are out of items. Then it gets the next 4 file paths from the filepath_dataset and
     interleaves them the same way, and so on until it runs out of file paths.
-    Note: Even with parallel calls specified, data within batches is sequential.
+    Even with parallel calls specified, data within batches is sequential.
     """
     filepaths = glob.glob(os.path.join(data_dir + "*.tfrecord"))
     filepath_dataset = tf.data.Dataset.list_files(filepaths)
@@ -213,3 +243,12 @@ def create_dataset(data_dir="Data/tfrecords/", cycle_length=4, num_parallel_call
                                                     num_parallel_calls=num_parallel_calls)
     assembled_dataset = assembled_dataset.shuffle(1000)
     return assembled_dataset
+
+
+def load_train_test_split():
+    """
+    Loads a train_test_split dict that divides all cell names into three lists,
+    recreating the splits from the original paper.
+    This can be passed directly to "write_to_tfrecords()" as an argument.
+    """
+    return pickle.load(open("train_test_split.pkl", "rb"))
