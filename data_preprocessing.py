@@ -20,6 +20,9 @@ class OutlierException(Exception):
         self.outlier_dict = outlier_dict
 
 def check_for_drop_warning(array_before, array_after, drop_warning_thresh=0.10):
+    """Checks weather the size of array_after is "drop_warning_thresh"-percent
+    smaller than array_before and issues a warning in that case."""
+    
     try:
         assert float(len(array_before)-len(array_after)) / len(array_before) < drop_warning_thresh, \
             """More than {} percent of values were dropped ({} out of {}).""".format(
@@ -97,9 +100,9 @@ def compute_outlier_dict(std_multiple_threshold, verbose=False, **kwargs):
     if verbose and outlier_dict:  
         # If outlier_dict has any entries, then print a version without the mask (too big for printing)
         outlier_dict_wo_mask = outlier_dict_without_mask(outlier_dict) # Generate a smaller dict for better printing
-        print("#########################")
-        print("Found outliers:")
+        print("############ Found outliers ############ ")
         pprint(outlier_dict_wo_mask)
+        print("")
     return outlier_dict
 
 
@@ -153,7 +156,7 @@ def drop_cycle_big_t_outliers(std_multiple_threshold, Qd, T, V, t, t_diff_outlie
             return Qd[:i], T[:i], V[:i], t[:i]
         else:
             raise OutlierException(
-                "Dropping cycle based on outliers with np.diff(t) > {} with value(s) {}".format(
+                "    Dropping cycle based on outliers with np.diff(t) > {} with value(s) {}".format(
                     t_diff_outlier_thresh,                    
                     list(outlier_dict["t"]["diff_values"][t_outlier_mask])),
                 outlier_dict)
@@ -202,6 +205,56 @@ def array_exclude_index(arr, id):
     mask = np.ones_like(arr, bool)
     mask[id] = False
     return arr[mask]
+
+
+def handle_small_Qd_outliers(std_multiple_threshold, Qd, t, Qd_max_outlier=0.06):
+    """Handles specifically small outliers in Qd, which are a result of constant values for a
+    small number of measurements before the "outlier". The constant values are imputed by linearly interpolating
+    Qd over t, since Qd over t should be linear anyways. This way the "outlier" is "neutralized", since there is no
+    "step" left from the constant values to the outlier value.
+    
+    Arguments:
+        std_multiple_threshold {int} -- Threshold to use for the compute_outlier_dict function
+        Qd {numpy.ndarray} -- Qd measurements
+        t {numpy.ndarray} -- t measurements corresponding to Qd
+    
+    Keyword Arguments:
+        Qd_max_outlier {float} -- The maximum absolute value for the found outliers in Qd, which get handled by this function.
+        This is needed only to make the function more specific. (default: {0.06})
+    
+    Returns:
+        numpy.ndarray -- The interpolated version of Qd.
+    """
+    
+    Qd_= Qd.copy()  # Only copy Qd, since it is the only array values are assigned to
+    outlier_dict = compute_outlier_dict(std_multiple_threshold, Qd=Qd_)
+    
+    if outlier_dict.get("Qd"):
+        # Get only the indeces of all small outliers
+        small_diff_value_mask = outlier_dict["Qd"]["diff_values"] <= Qd_max_outlier
+        ids = outlier_dict["Qd"]["outlier_indeces"][small_diff_value_mask]
+    else:
+        ids = None
+    
+    if ids:
+        # Interpolate all values before small outliers that stay constant (np.diff == 0)
+        for i in ids:
+            # Get the last index, where the value of Qd doesn't stay constant before the outlier.
+            start_id = int(np.argwhere(np.diff(Qd_[:i]) > 0)[-1])
+            
+            # Make a mask for where to interpolate
+            interp_mask = np.zeros_like(Qd_, dtype=bool)
+            interp_mask[start_id:i] = True
+            interp_values = np.interp(
+                t[interp_mask],  # Where to evaluate the interpolation function.
+                t[~interp_mask],  # X values for the interpolation function.
+                Qd_[~interp_mask]  # Y values for the interpolation function.
+                )
+            # Assign the interpolated values
+            Qd_[interp_mask] = interp_values
+            print("    Interpolated small Qd outlier from index {} to {}".format(start_id, i))
+            
+    return Qd_
 
 
 def make_strictly_decreasing(x_interp, y_interp, prepend_value=3.7):     
@@ -263,8 +316,6 @@ def preprocess_cycle(
     Returns:
         {dict} -- Dictionary with the resampled (and original) values. 
     """
-    # TODO: Handle small Qd outliers with diff around 0.04 so not all following values are dropped
-    # TODO: Watch warnings for dropping more than 10 percent at the end of batch two
     # TODO: Process all batches before moving on?
     # TODO: Check with new threshold after processing outliers of std >= 12
 
@@ -286,9 +337,12 @@ def preprocess_cycle(
     increasing_time_mask = np.diff(t, prepend=0) > 0
     Qd, T, V, t = multiple_array_indexing(increasing_time_mask, Qd, T, V, t)
 
+    ## Dropping outliers.
     Qd, T, V, t = drop_cycle_big_t_outliers(15, Qd, T, V, t)
     
-    Qd, T, V, t = drop_outliers_starting_left(12, Qd=Qd, T=T, V=V, t=t)
+    Qd = handle_small_Qd_outliers(12, Qd, t)
+    
+    Qd, T, V, t = drop_outliers_starting_left(12, Qd, T, V, t)
     
     # if outlier_dict:  # If V was an outlier before, check out the result
     #     debug_plot(Qd, T, V, t)
@@ -571,6 +625,7 @@ def main():
 
     results, cycles_drop_info = preprocess_batch(batch1, return_original_data=True, return_cycle_drop_info=True, verbose=True)
     pprint(cycles_drop_info)
+    describe_results_dict(results)
     print("Done!")
 
 if __name__ == "__main__":
