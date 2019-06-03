@@ -11,3 +11,6 @@ __pycache__/
 # ignore ide
 .idea
 .vscode/*
+
+# local TensorBoard dir
+Graph/
