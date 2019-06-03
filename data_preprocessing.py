@@ -160,11 +160,12 @@ def drop_cycle_big_t_outliers(std_multiple_threshold, Qd, T, V, t, t_diff_outlie
         return Qd, T, V, t
 
 
-def drop_outliers_starting_left(std_multiple_threshold, **kwargs):
+def drop_outliers_starting_left(std_multiple_threshold, Qd, T, V, t):
+    Qd, T, V, t = Qd.copy(), T.copy(), V.copy(), t.copy(),
+    
     # Initialize and compute outliers
-    array_dict = kwargs  # kwargs is used, so the number of arrays can vary.
     drop_counter = 0
-    outlier_dict = compute_outlier_dict(std_multiple_threshold, verbose=True, **array_dict)
+    outlier_dict = compute_outlier_dict(std_multiple_threshold, verbose=True, Qd=Qd, T=T, V=V, t=t)
     original_outlier_dict = outlier_dict  # copy for debugging und raising OutlierException.
     
     # Process until no outliers are found.
@@ -175,11 +176,15 @@ def drop_outliers_starting_left(std_multiple_threshold, **kwargs):
         unique_indeces_to_drop = list(set(first_outlier_indeces))
         
         # Drop all unique outlier indeces from all arrays.
-        array_dict = {k: array_exclude_index(v, unique_indeces_to_drop) for k, v in array_dict.items()}
+        Qd = array_exclude_index(Qd, unique_indeces_to_drop)
+        T = array_exclude_index(T, unique_indeces_to_drop)
+        V = array_exclude_index(V, unique_indeces_to_drop)
+        t = array_exclude_index(t, unique_indeces_to_drop)
+        
         drop_counter += len(unique_indeces_to_drop)
         
         # Recompute outlierts after dropping the unique indeces from all arrays.
-        outlier_dict = compute_outlier_dict(std_multiple_threshold, **array_dict)
+        outlier_dict = compute_outlier_dict(std_multiple_threshold, Qd=Qd, T=T, V=V, t=t)
     
     if drop_counter > 0:
         print("Dropped {} outliers in {}".format(drop_counter, list(original_outlier_dict.keys())))
@@ -191,7 +196,7 @@ def drop_outliers_starting_left(std_multiple_threshold, **kwargs):
     #             original_outlier_dict)
     
     # Returns all arrays in the order that they where given in kwargs
-    return tuple(v for v in array_dict.values())
+    return Qd, T, V, t
 
 
 def array_exclude_index(arr, id):
