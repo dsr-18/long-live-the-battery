@@ -4,7 +4,7 @@ import pickle
 from pathlib import Path
 
 # TODO consolidate constants & filepaths throughout codebase
-DATA_DIR = "data/"
+DATA_DIR = "../data/"
 
 def load_batches_to_dict(amount_to_load=3):
     """Loads batches from disc and returns one concatenated dict.

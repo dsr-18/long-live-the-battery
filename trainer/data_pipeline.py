@@ -3,7 +3,7 @@ import glob
 from tensorflow.train import FloatList, Int64List, Feature, Features, Example
 import tensorflow as tf
 
-TFR_DIR = "data/tfrecords/"
+TFR_DIR = "../data/tfrecords/"
 
 def get_cycle_example(cell, idx):
     """

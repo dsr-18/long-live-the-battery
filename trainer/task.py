@@ -8,7 +8,7 @@ import data_pipeline as dp
 import split_model
 
 DEFAULT_GCS_BUCKET = 'gs://ion_age/keras'
-TB_LOG_DIR = './Graph'
+TB_LOG_DIR = '../Graph'
 
 def get_args():
   """Argument parser.
