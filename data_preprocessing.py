@@ -19,6 +19,21 @@ class OutlierException(Exception):
         super().__init__(message)
         self.outlier_dict = outlier_dict
 
+def check_for_drop_warning(array_before, array_after, drop_warning_thresh=0.10):
+    try:
+        assert float(len(array_before)-len(array_after)) / len(array_before) < drop_warning_thresh, \
+            """More than {} percent of values were dropped ({} out of {}).""".format(
+                    drop_warning_thresh*100,
+                    len(array_before)-len(array_after),
+                    len(array_before)
+                )
+    except AssertionError as e:
+        warnings.warn(str(e))
+        # simple_plotly(array_before[-1], V_original=array_before[2])
+        # simple_plotly(array_after[-1], V_indexed=array_after[2])
+    finally:
+        pass
+
 
 def multiple_array_indexing(valid_numpy_index, *args, drop_warning=False, drop_warning_thresh=0.10):
     """Indexes multiple numpy arrays at once and returns the result in a tuple.
@@ -32,22 +47,8 @@ def multiple_array_indexing(valid_numpy_index, *args, drop_warning=False, drop_w
     indexed_arrays = [arg[valid_numpy_index].copy() for arg in args]    
     
     if drop_warning:
-        # Check if a higher percentage of values than drop_warning_thresh were dropped during indexing.
-        try:
-            assert float(len(args[0])-len(indexed_arrays[0])) / len(args[0]) < drop_warning_thresh, \
-                """More than {} percent of values were dropped ({} out of {}).""".format(
-                        drop_warning_thresh*100,
-                        len(args[0])-len(indexed_arrays[0]),
-                        len(args[0])
-                    )
-        except AssertionError as e:
-            warnings.warn(str(e))
-            # from generic_helpers import simple_plotly
-            # simple_plotly(args[-1], V_indexed=indexed_arrays[2], V_original=args[2])
-        finally:
-            return tuple(indexed_arrays)
-    else:
-        return tuple(indexed_arrays)
+        check_for_drop_warning(args[0], indexed_arrays[0])
+    return tuple(indexed_arrays)
 
 
 def outlier_dict_without_mask(outlier_dict):
@@ -161,11 +162,11 @@ def drop_cycle_big_t_outliers(std_multiple_threshold, Qd, T, V, t, t_diff_outlie
 
 
 def drop_outliers_starting_left(std_multiple_threshold, Qd, T, V, t):
-    Qd, T, V, t = Qd.copy(), T.copy(), V.copy(), t.copy(),
+    Qd_, T_, V_, t_ = Qd.copy(), T.copy(), V.copy(), t.copy()
     
     # Initialize and compute outliers
     drop_counter = 0
-    outlier_dict = compute_outlier_dict(std_multiple_threshold, verbose=True, Qd=Qd, T=T, V=V, t=t)
+    outlier_dict = compute_outlier_dict(std_multiple_threshold, verbose=True, Qd=Qd_, T=T_, V=V_, t=t_)
     original_outlier_dict = outlier_dict  # copy for debugging und raising OutlierException.
     
     # Process until no outliers are found.
@@ -176,27 +177,22 @@ def drop_outliers_starting_left(std_multiple_threshold, Qd, T, V, t):
         unique_indeces_to_drop = list(set(first_outlier_indeces))
         
         # Drop all unique outlier indeces from all arrays.
-        Qd = array_exclude_index(Qd, unique_indeces_to_drop)
-        T = array_exclude_index(T, unique_indeces_to_drop)
-        V = array_exclude_index(V, unique_indeces_to_drop)
-        t = array_exclude_index(t, unique_indeces_to_drop)
+        Qd_ = array_exclude_index(Qd_, unique_indeces_to_drop)
+        T_ = array_exclude_index(T_, unique_indeces_to_drop)
+        V_ = array_exclude_index(V_, unique_indeces_to_drop)
+        t_ = array_exclude_index(t_, unique_indeces_to_drop)
         
         drop_counter += len(unique_indeces_to_drop)
         
         # Recompute outlierts after dropping the unique indeces from all arrays.
-        outlier_dict = compute_outlier_dict(std_multiple_threshold, Qd=Qd, T=T, V=V, t=t)
+        outlier_dict = compute_outlier_dict(std_multiple_threshold, Qd=Qd_, T=T_, V=V_, t=t_)
     
     if drop_counter > 0:
-        print("Dropped {} outliers in {}".format(drop_counter, list(original_outlier_dict.keys())))
+        print("    Dropped {} outliers in {}".format(drop_counter, list(original_outlier_dict.keys())))
+        print("")
     
-    # if drop_whole_cycle_after:
-    #     if drop_counter >= drop_whole_cycle_after:
-    #         raise OutlierException(
-    #             "Dropping whole cycle based on threshold of {} outliers".format(drop_whole_cycle_after),
-    #             original_outlier_dict)
-    
-    # Returns all arrays in the order that they where given in kwargs
-    return Qd, T, V, t
+    check_for_drop_warning(Qd, Qd_)
+    return Qd_, T_, V_, t_
 
 
 def array_exclude_index(arr, id):
