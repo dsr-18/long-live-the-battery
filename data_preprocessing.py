@@ -524,6 +524,43 @@ def plot_preprocessing_results(cycle_results_dict, inline=True):
         pyo.plot(fig)
 
 
+def describe_results_dict(results_dict):
+    describe_dict = dict()
+    
+    cycle_life_list = [cell["cycle_life"] for cell in results_dict.values()]
+    
+    describe_dict.update(dict(
+        cycle_life=dict(
+            max = np.max(cycle_life_list),
+            min = np.min(cycle_life_list),
+            mean = np.mean(cycle_life_list),
+            std = np.std(cycle_life_list)
+        )
+    ))
+
+    summary_results = dict()
+    for k in ["IR", "QD", "remaining_cycle_life", "high_current_discharging_time"]:
+        summary_results[k] = dict(
+            max = np.max([np.max(cell["summary"][k]) for cell in results_dict.values()]),
+            min = np.min([np.min(cell["summary"][k]) for cell in results_dict.values()]),
+            mean = np.mean([np.mean(cell["summary"][k]) for cell in results_dict.values()]),
+            mean_std = np.std([np.std(cell["summary"][k]) for cell in results_dict.values()])
+        )
+    describe_dict.update(dict(summary_results=summary_results))
+    
+    cycle_results = dict()
+    for k in ["Qd_resample", "T_resample"]:
+        cycle_results[k] = dict(
+            max = np.max([np.max(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()]),
+            min = np.min([np.min(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()]),
+            mean = np.mean([np.mean(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()]),
+            mean_std = np.mean([np.std(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()])
+        )
+    describe_dict.update(dict(cycle_results=cycle_results))
+    
+    pprint(describe_dict)
+
+
 def main():
     from rebuilding_features import load_batches_to_dict
     
