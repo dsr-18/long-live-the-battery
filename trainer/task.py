@@ -7,8 +7,31 @@ import tensorflow as tf
 import data_pipeline as dp
 import split_model
 
-DEFAULT_GCS_BUCKET = 'gs://ion_age/keras'
-TB_LOG_DIR = '../Graph'
+BUCKET = 'ion_age_bucket'
+PROJECT = 'ion-age'
+REGION = 'europe-west1'
+
+TRAINED_MODEL_DIR = 'gs://{}/keras/'.format(BUCKET)
+TRAINED_MODEL_DIR_LOCAL = './'
+
+TB_LOG_DIR = 'Graph'
+
+
+def gcp_setup():
+  """
+  [Work in Progress]
+  Setup local env for Google Cloud Platform calls
+  https://github.com/GoogleCloudPlatform/data-science-on-gcp/blob/master/updates/cloudml/flights_model_tf2.ipynb
+  """
+  os.environ['BUCKET'] = BUCKET
+  os.environ['PROJECT'] = PROJECT
+  os.environ['REGION'] = REGION
+  os.environ['OUTDIR'] = TRAINED_MODEL_DIR  # needed for deployment
+
+  os.system('gcloud config set project $PROJECT')
+  os.system('gcloud config set compute/region $REGION')
+#  os.system('gcloud auth login')  # opens browser to login with Google user creds
+
 
 def get_args():
   """Argument parser.
@@ -20,7 +43,7 @@ def get_args():
   parser.add_argument(
       '--job-dir',
       type=str,
-      default=DEFAULT_GCS_BUCKET,
+      default=TRAINED_MODEL_DIR_LOCAL,   ## TODO save locally for now
       help='local or GCS location for writing checkpoints and exporting models')
   parser.add_argument(
       '--num-epochs',
@@ -76,12 +99,12 @@ def train_and_evaluate(args):
   # export saved model to GCS bucket
   # https://www.tensorflow.org/alpha/tutorials/keras/save_and_restore_models
   # TODO doesn't work yet: need to set up permissions
-  saved_model_path = os.path.join(args.job_dir, "saved_models/{}".format(int(time.time())))
-#  tf.keras.experimental.export_saved_model(model, saved_model_path)
+  saved_model_path = os.path.join(args.job_dir, "saved_models/{}".format(int(time.time())))  
+  tf.keras.experimental.export_saved_model(model, saved_model_path)
   print('Model should export to: ', saved_model_path)
 
-
 if __name__ == '__main__':
+#  gcp_setup()
   args = get_args()
   logging.set_verbosity(args.verbosity)
   train_and_evaluate(args)
