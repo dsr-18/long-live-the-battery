@@ -12,7 +12,9 @@ class DropCycleException(Exception):
     """Used for dropping whole cycles without additional information."""
     pass
 
+
 class OutlierException(Exception):
+    """Used for dropping whole cycles based on detected outliers"""
     def __init__(self, message, outlier_dict):
         super().__init__(message)
         self.outlier_dict = outlier_dict
@@ -108,7 +110,7 @@ def debug_plot(Qd, T, V, t):
     simple_plotly(T, V=V)
 
 
-def drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t, t_diff_outlier_thresh=100):
+def drop_cycle_big_t_outliers(std_multiple_threshold, Qd, T, V, t, t_diff_outlier_thresh=100):
     """Checks for big outliers in the np.diff() values of t.
     If any are found the whole cyce is dropped, with one exception:
         There is only one outlier which lays right after the end of discharging.
@@ -131,7 +133,12 @@ def drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t, t_diff_outlier_thresh=1
         Tuple of numpy.ndarray  -- Returns the original values of Qd, T, V and t if no big t outlier is found, or
             a slice of all arrays if the only outlier lays right after the end of discharging.
     """
-    t_outlier_mask = outlier_dict["t"]["diff_values"] > t_diff_outlier_thresh
+    outlier_dict = compute_outlier_dict(std_multiple_threshold=std_multiple_threshold, Qd=Qd, T=T, V=V, t=t)
+    if outlier_dict.get("t"):  # If any outliert was found in t
+        t_outlier_mask = outlier_dict["t"]["diff_values"] > t_diff_outlier_thresh
+    else:
+        t_outlier_mask = None
+    
     if np.any(t_outlier_mask):  # Only do something if there are big outliers.
         # Get the indeces 1 before the t outliers.
         indeces_before_t_outliers = outlier_dict["t"]["outlier_indeces"][t_outlier_mask] - 1
@@ -256,6 +263,7 @@ def preprocess_cycle(
         {dict} -- Dictionary with the resampled (and original) values. 
     """
     # TODO: Handle small Qd outliers with diff around 0.04 so not all following values are dropped
+    # TODO: Watch warnings for dropping more than 10 percent at the end of batch two
     # TODO: Process all batches before moving on?
     # TODO: Check with new threshold after processing outliers of std >= 12
 
@@ -277,12 +285,9 @@ def preprocess_cycle(
     increasing_time_mask = np.diff(t, prepend=0) > 0
     Qd, T, V, t = multiple_array_indexing(increasing_time_mask, Qd, T, V, t)
 
+    Qd, T, V, t = drop_cycle_big_t_outliers(15, Qd, T, V, t)
     
-    outlier_dict = compute_outlier_dict(std_multiple_threshold=15, Qd=Qd, T=T, V=V, t=t)
-    if outlier_dict.get("t"):  # If any outliert was found in t
-        Qd, T, V, t = drop_cycle_big_t_outliers(outlier_dict, Qd, T, V, t)
-    
-    Qd, T, V, t = drop_outliers_starting_left(std_multiple_threshold=12, Qd=Qd, T=T, V=V, t=t)
+    Qd, T, V, t = drop_outliers_starting_left(12, Qd=Qd, T=T, V=V, t=t)
     
     # if outlier_dict:  # If V was an outlier before, check out the result
     #     debug_plot(Qd, T, V, t)
