@@ -6,6 +6,7 @@ import pickle
 
 TFR_DIR = "data/tfrecords/"
 
+
 def get_cycle_example(cell, idx):
     """
     Define the columns that should be written to tfrecords and converts the raw data
@@ -47,7 +48,7 @@ def get_preprocessed_cycle_example(cell, idx):
     return cycle_example
 
 
-def write_to_tfrecords(batteries, data_dir="Data/tfrecords/", preprocessed=True, train_test_split=None):
+def write_to_tfrecords(batteries, data_dir=TFR_DIR, preprocessed=True, train_test_split=None):
     """
     Takes battery data in dict format as input and writes a set of tfrecords files to disk.
 
@@ -217,7 +218,7 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
     return create_cell_dataset_from_tfrecords
 
 
-def create_dataset(data_dir="Data/tfrecords/", cycle_length=4, num_parallel_calls=4,
+def create_dataset(data_dir=TFR_DIR, cycle_length=4, num_parallel_calls=4,
                    window_size=5, shift=1, stride=1, drop_remainder=True, batch_size=10, shuffle=True,
                    preprocessed=True):
     """
