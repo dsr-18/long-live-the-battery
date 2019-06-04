@@ -1,16 +1,15 @@
+import pickle
+import warnings
+from os.path import join
+from pprint import pprint
+
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import savgol_filter
-import pickle
-from os.path import join
-from plotly import tools
-import plotly.offline as pyo
-import plotly.graph_objs as go
-import warnings
-from pprint import pprint
 
+from .rebuilding_features import load_batches_to_dict
 
-SAVE_DIR = join("data", "processed_data.pkl")
+SAVE_DIR = join("..", "data", "processed_data.pkl")
 
 class DropCycleException(Exception):
     """Used for dropping whole cycles without additional information."""
@@ -109,14 +108,6 @@ def compute_outlier_dict(std_multiple_threshold, verbose=False, **kwargs):
         pprint(outlier_dict_wo_mask)
         print("")
     return outlier_dict
-
-
-def debug_plot(Qd, T, V, t):
-    from generic_helpers import simple_plotly
-    sample_space = np.arange(len(V))
-    simple_plotly(sample_space, V=V, Q=Qd, T=T, t=t)
-    simple_plotly(Qd, V=V)
-    simple_plotly(T, V=V)
 
 
 def drop_cycle_big_t_outliers(std_multiple_threshold, Qd, T, V, t, t_diff_outlier_thresh=100):
@@ -349,13 +340,6 @@ def preprocess_cycle(
     
     Qd, T, V, t = drop_outliers_starting_left(12, Qd, T, V, t)
     
-    # if outlier_dict:  # If V was an outlier before, check out the result
-    #     debug_plot(Qd, T, V, t)
-    
-    # if outlier_dict.get("t"):  # If an outlier was found, then calculate new discharge time.
-    #     not_t_outliers = ~outlier_dict["t"]["outlier_mask"]
-    #     high_current_discharging_time = np.sum(np.diff(t, prepend=t[0])[not_t_outliers])  # Only sum the diff values, that aren't a diff outlier.
-    
     # Apply savitzky golay filter to V to smooth out the values.
     # This is done in order to not drop too many values in the next processing step (make monotonically decreasing).
     # This way the resulting curves don't become skewed too much in the direction of smaller values.
@@ -371,15 +355,8 @@ def preprocess_cycle(
     v_decreasing_mask = V_savgol == np.minimum.accumulate(V_savgol)
     Qd, T, V, t = multiple_array_indexing(v_decreasing_mask, Qd, T, V_savgol, t, drop_warning=True)
     
-    # #check_outliers(Qd=Qd, T=T, V=V, t=t)
-    # if outlier_dict:  # If V was an outlier before, check out the result
-    #     debug_plot(Qd, T, V, t)
-
     ## Make V_3 strictly decreasing (needed for interpolation).
     V_strict_dec = make_strictly_decreasing(t, V)
-
-    # if outlier_dict:  # If V was an outlier before, check out the result
-    #     debug_plot(Qd, T, V, t)
 
     # Calculate discharging time. (Only scalar feature which is returned later)
     high_current_discharging_time = t.max() - t.min()
@@ -532,63 +509,9 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
         return batch_results
 
 
-def plot_preprocessing_results(cycle_results_dict, inline=True):
-    """Plots comparison curves with plotly for a results dict of one cycle.
-    When the original data is not included, only the resampled data is shown.
-        
-    Arguments:
-        results_dict {dict} -- results returned from preprocess_cycle.
-    """
-
-    pyo.init_notebook_mode(connected=True)
-
-    traces1 = []
-    if "Qd_original_data" in cycle_results_dict.keys():
-        traces1.append(go.Scatter(dict(
-            x=cycle_results_dict["Qd_original_data"], 
-            y=cycle_results_dict["V_original_data"], 
-            mode = 'markers', 
-            name='Qd original data'
-            )))
-    traces1.append(go.Scatter(dict(
-        x=cycle_results_dict["Qd_resample"], 
-        y=cycle_results_dict["V_resample"], 
-        mode='lines+markers', 
-        name='Qd resampled'
-        )))
-    
-    traces2 = []
-    if "T_original_data" in cycle_results_dict.keys():
-        traces2.append(go.Scatter(dict(
-            x=cycle_results_dict["T_original_data"],
-            y=cycle_results_dict["V_original_data"],
-            mode = 'markers',
-            name='T original data'
-            )))
-    traces2.append(go.Scatter(dict(
-        x=cycle_results_dict["T_resample"],
-        y=cycle_results_dict["V_resample"],
-        mode= 'lines+markers',
-        name='T resampled'
-        )))
-
-    fig = tools.make_subplots(rows=2, cols=1)
-
-    for trace in traces1:
-        fig.append_trace(trace, 1, 1)
-
-    for trace in traces2:
-        fig.append_trace(trace, 2, 1)
-
-    fig['layout'].update(height=1000, width=1000)
-    
-    if inline:
-        pyo.iplot(fig)
-    else:
-        pyo.plot(fig)
-
-
 def describe_results_dict(results_dict):
+    """Prints summary statistics for all computed results over every single cycle.
+    This might take a few seconds, since it has to search the whole dictionary for every vallue."""
     print("Collecting results data and printing results ...")
     describe_dict = dict()
     
@@ -628,8 +551,8 @@ def describe_results_dict(results_dict):
 
 def save_preprocessed_data(results_dict, save_dir=SAVE_DIR):
     print("Saving preprocessed data to {}".format(save_dir))
-    with open(save_dir, 'wb') as fp:
-        pickle.dump(bat_dict, fp)
+    with open(save_dir, 'wb') as f:
+        pickle.dump(results_dict, f)
     
 
 def load_preprocessed_data(save_dir=SAVE_DIR):
@@ -639,11 +562,13 @@ def load_preprocessed_data(save_dir=SAVE_DIR):
 
 
 def main():
-    from rebuilding_features import load_batches_to_dict
-    
     batch_dict = load_batches_to_dict(amount_to_load=3)    
 
-    results, cycles_drop_info = preprocess_batch(batch_dict, return_original_data=True, return_cycle_drop_info=True, verbose=True)
+    results, cycles_drop_info = preprocess_batch(batch_dict,
+                                                 return_original_data=True,
+                                                 return_cycle_drop_info=True,
+                                                 verbose=True)
+    
     pprint(cycles_drop_info)
     describe_results_dict(results)
     
