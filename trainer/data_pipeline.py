@@ -1,11 +1,11 @@
 import glob
-import os
 import pickle
+import os
 
 import tensorflow as tf
 from tensorflow.train import FloatList, Int64List, Feature, Features, Example
 
-TFR_DIR = "data/tfrecords/"
+TFR_DIR = os.path.join("data", "tfrecords")
 
 
 def get_cycle_example(cell_value, summary_idx, cycle_idx):
@@ -92,8 +92,8 @@ def write_single_cell(cell_name, cell_data, data_dir, preprocessed):
     "b1c0.tfrecord". The SerializeToString() method creates binary data out of the
     Example objects that can be read natively in TensorFlow.
     """
-    filename = os.path.join(data_dir + cell_name + ".tfrecord")
-    with tf.io.TFRecordWriter(filename) as f:
+    filename = os.path.join(data_dir, cell_name + ".tfrecord")
+    with tf.io.TFRecordWriter(str(filename)) as f:
         for summary_idx, cycle_idx in enumerate(cell_data["cycles"].keys()):
             if preprocessed:
                 cycle_to_write = get_preprocessed_cycle_example(cell_data, summary_idx, cycle_idx)
@@ -117,7 +117,7 @@ def parse_features(example_proto):
         'IR': tf.io.FixedLenFeature([1, ], tf.float32),
         'Tdlin': tf.io.FixedLenFeature([1000, 1], tf.float32),
         'Qdlin': tf.io.FixedLenFeature([1000, 1], tf.float32),
-        'Remaining_cycles': tf.io.FixedLenFeature([], tf.int64)
+        'Remaining_cycles': tf.io.FixedLenFeature([], tf.float32)
     }
     examples = tf.io.parse_single_example(example_proto, feature_description)
     targets = examples.pop("Remaining_cycles")
@@ -131,7 +131,7 @@ def parse_preprocessed_features(example_proto):
     feature_description = {
         'IR': tf.io.FixedLenFeature([1, ], tf.float32),
         'Discharge_time': tf.io.FixedLenFeature([1, ], tf.float32),
-        'Remaining_cycles': tf.io.FixedLenFeature([], tf.int64),
+        'Remaining_cycles': tf.io.FixedLenFeature([], tf.float32),
         'Tdlin': tf.io.FixedLenFeature([1000, 1], tf.float32),
         'Qdlin': tf.io.FixedLenFeature([1000, 1], tf.float32)
     }
@@ -236,7 +236,7 @@ def create_dataset(data_dir=TFR_DIR, cycle_length=4, num_parallel_calls=4,
     interleaves them the same way, and so on until it runs out of file paths.
     Even with parallel calls specified, data within batches is sequential.
     """
-    filepaths = glob.glob(os.path.join(data_dir + "*.tfrecord"))
+    filepaths = glob.glob(os.path.join(data_dir, "*.tfrecord"))
     filepath_dataset = tf.data.Dataset.list_files(filepaths)
     assembled_dataset = filepath_dataset.interleave(get_create_cell_dataset_from_tfrecords(window_size, shift, stride,
                                                                                            drop_remainder,
