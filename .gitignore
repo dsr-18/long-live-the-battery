@@ -1,5 +1,5 @@
 #ignore data folder
-Data/
+data/
 
 #ignore Matlab files
 *.asv
@@ -14,3 +14,9 @@ __pycache__/
 
 # ignore temp files from plotly
 *.html
+
+# local TensorBoard dir
+Graph/
+
+# local saved models
+saved_models/

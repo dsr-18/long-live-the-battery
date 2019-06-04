@@ -3,11 +3,12 @@ import pandas as pd
 import pickle
 from pathlib import Path
 
+# TODO consolidate constants & filepaths throughout codebase
+DATA_DIR = "data/"
 
 def load_batches_to_dict(amount_to_load=3):
     """Loads batches from disc and returns one concatenated dict.
     amount_to_load specifies the number of batches to load, starting from 1."""
-
     if amount_to_load < 1 or amount_to_load > 3:
         raise "amount_to_load is not a valid number! Try a number between 1 and 3."
 
@@ -15,7 +16,7 @@ def load_batches_to_dict(amount_to_load=3):
 
     # Replicating Load Data logic
     print("Loading batch1 ...")
-    path1 = Path("Data/batch1.pkl")
+    path1 = Path(DATA_DIR+"batch1.pkl")
     batch1 = pickle.load(open(path1, 'rb'))
 
     #remove batteries that do not reach 80% capacity
@@ -29,7 +30,7 @@ def load_batches_to_dict(amount_to_load=3):
 
     if amount_to_load > 1:
         print("Loading batch2 ...")
-        path2 = Path("Data/batch2.pkl")
+        path2 = Path(DATA_DIR+"batch2.pkl")
         batch2 = pickle.load(open(path2, 'rb'))
 
         # There are four cells from batch1 that carried into batch2, we'll remove the data from batch2
@@ -61,7 +62,7 @@ def load_batches_to_dict(amount_to_load=3):
 
     if amount_to_load > 2:
         print("Loading batch3 ...")
-        path3 = Path("Data/batch3.pkl")
+        path3 = Path(DATA_DIR+"batch3.pkl")
         batch3 = pickle.load(open(path3, 'rb'))
 
         # remove noisy channels from batch3
@@ -178,6 +179,6 @@ if __name__ == "__main__":
     all_batches_dict = load_batches_to_dict()
     features_df = build_feature_df(all_batches_dict)
 
-    save_csv_path = Path("Data/rebuild_features.csv")
+    save_csv_path = Path(DATA_DIR+"rebuild_features.csv")
     features_df.to_csv(save_csv_path, index=False)
     print("Saved features to ", save_csv_path)
