@@ -1,11 +1,11 @@
 import argparse
 import os
-from absl import logging
 import time
 
-import tensorflow as tf
 import data_pipeline as dp
 import split_model
+import tensorflow as tf
+from absl import logging
 
 BUCKET = 'ion_age_bucket'
 PROJECT = 'ion-age'
@@ -67,6 +67,7 @@ def get_args():
   args, _ = parser.parse_known_args()
   return args
 
+
 def train_and_evaluate(args):
   """Trains and evaluates the Keras model.
 
@@ -79,7 +80,7 @@ def train_and_evaluate(args):
   """
   
   # load dataset
-  dataset = dp.create_dataset()
+  dataset = dp.create_dataset(data_dir=os.path.join("data", "tfrecords", "train"))
 
   # create model
   model = split_model.create_keras_model(args)
