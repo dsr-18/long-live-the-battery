@@ -1,13 +1,14 @@
-import os
 import glob
-from tensorflow.train import FloatList, Int64List, Feature, Features, Example
-import tensorflow as tf
+import os
 import pickle
+
+import tensorflow as tf
+from tensorflow.train import FloatList, Int64List, Feature, Features, Example
 
 TFR_DIR = "data/tfrecords/"
 
 
-def get_cycle_example(cell, idx):
+def get_cycle_example(cell_value, summary_idx, cycle_idx):
     """
     Define the columns that should be written to tfrecords and converts the raw data
     to "Example" objects. Every Example contains data from one charging cycle.
@@ -15,17 +16,17 @@ def get_cycle_example(cell, idx):
     cycle_example = Example(
         features=Features(
             feature={
-                "IR": Feature(float_list=FloatList(value=[cell["summary"]["IR"][idx]])),
-                "Qdlin": Feature(float_list=FloatList(value=cell["cycles"][str(idx)]["Qdlin"])),
-                "Tdlin": Feature(float_list=FloatList(value=cell["cycles"][str(idx)]["Tdlin"])),
-                "Remaining_cycles": Feature(int64_list=Int64List(value=[int(cell["cycle_life"]-idx)]))
+                "IR": Feature(float_list=FloatList(value=[cell_value["summary"]["IR"][summary_idx]])),
+                "Qdlin": Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["Qdlin"])),
+                "Tdlin": Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["Tdlin"])),
+                "Remaining_cycles": Feature(float_list=FloatList(value=[(cell_value["cycle_life"] - int(summary_idx))]))
             }
         )
     )
     return cycle_example
 
 
-def get_preprocessed_cycle_example(cell, idx):
+def get_preprocessed_cycle_example(cell_value, summary_idx, cycle_idx):
     """
     Same as above, but with the preprocessed data
     """
@@ -33,15 +34,15 @@ def get_preprocessed_cycle_example(cell, idx):
         features=Features(
             feature={
                 "IR":
-                    Feature(float_list=FloatList(value=[cell["summary"]["IR"][idx]])),
+                    Feature(float_list=FloatList(value=[cell_value["summary"]["IR"][summary_idx]])),
                 "Remaining_cycles":
-                    Feature(int64_list=Int64List(value=[cell["summary"]["remaining_cycle_life"][idx]])),
+                    Feature(float_list=FloatList(value=[cell_value["summary"]["remaining_cycle_life"][summary_idx]])),
                 "Discharge_time":
-                    Feature(float_list=FloatList(value=[cell["summary"]["high_current_discharging_time"][idx]])),
+                    Feature(float_list=FloatList(value=[cell_value["summary"]["high_current_discharging_time"][summary_idx]])),
                 "Qdlin":
-                    Feature(float_list=FloatList(value=cell["cycles"][str(idx)]["Qd_resample"])),
+                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["Qd_resample"])),
                 "Tdlin":
-                    Feature(float_list=FloatList(value=cell["cycles"][str(idx)]["T_resample"]))
+                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["T_resample"]))
             }
         )
     )
@@ -93,11 +94,11 @@ def write_single_cell(cell_name, cell_data, data_dir, preprocessed):
     """
     filename = os.path.join(data_dir + cell_name + ".tfrecord")
     with tf.io.TFRecordWriter(filename) as f:
-        for cycle_idx in cell_data["summary"]["cycle"]:
+        for summary_idx, cycle_idx in enumerate(cell_data["cycles"].keys()):
             if preprocessed:
-                cycle_to_write = get_preprocessed_cycle_example(cell_data, int(cycle_idx)-1)
+                cycle_to_write = get_preprocessed_cycle_example(cell_data, summary_idx, cycle_idx)
             else:
-                cycle_to_write = get_cycle_example(cell_data, int(cycle_idx)-1)
+                cycle_to_write = get_cycle_example(cell_data, summary_idx, cycle_idx)
             f.write(cycle_to_write.SerializeToString())
     print("Created %s.tfrecords file." % cell_name)
 
@@ -254,3 +255,18 @@ def load_train_test_split():
     This can be passed directly to "write_to_tfrecords()" as an argument.
     """
     return pickle.load(open("train_test_split.pkl", "rb"))
+
+
+def load_processed_battery_data():
+    return pickle.load(open("data/processed_data.pkl", "rb"))
+
+
+if __name__ == "__main__":
+    print("Writing datasets with train/test split from original paper and preprocessed data.")
+    print("Loading split...")
+    split = load_train_test_split()
+    print("Loading battery data...")
+    battery_data = load_processed_battery_data()
+    print("Start writing to disk...")
+    write_to_tfrecords(battery_data, preprocessed=True, train_test_split=split)
+    print("Done.")
