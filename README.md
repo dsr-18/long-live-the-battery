@@ -9,17 +9,7 @@ pip install -r requirements_pip.txt
 ```
 
 ## Run
-To run the model locally, use the following command:
+To run the model, use the following command:
 ```
 python trainer/task.py
 ```
-
-To run the model in Google Cloud Platform (Team Members Only):
-
-1. Make sure you have access to the ion-age project
-2. Install GCloud SDK (https://cloud.google.com/sdk/docs/)
-3. Run from project dir:
-```
-. train.sh
-```
-  .  Follow output URL to stream logs.
