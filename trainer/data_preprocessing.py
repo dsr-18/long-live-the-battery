@@ -7,9 +7,9 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import savgol_filter
 
-from .rebuilding_features import load_batches_to_dict
+from rebuilding_features import load_batches_to_dict
 
-SAVE_DIR = join("..", "data", "processed_data.pkl")
+SAVE_DIR = join("data", "processed_data.pkl")
 
 class DropCycleException(Exception):
     """Used for dropping whole cycles without additional information."""
