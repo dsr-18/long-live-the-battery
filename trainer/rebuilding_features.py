@@ -114,7 +114,10 @@ def build_feature_df(batch_dict):
     variance_dQ_5_4 = np.zeros(n_cells)
     cycle_550_clf = np.zeros(n_cells)
 
+    # Supplementary Paper Features
+
     for i, cell in enumerate(batch_dict.values()):
+
         cycle_life[i] = cell['cycle_life']
 
         # 1. delta_Q_100_10(V)    
@@ -144,7 +147,7 @@ def build_feature_df(batch_dict):
         minimum_IR_2_100[i] = np.min(cell['summary']['IR'][1:100])
         diff_IR_100_2[i] = cell['summary']['IR'][100] - cell['summary']['IR'][1]
 
-        # Classifier features
+        # Classifier Features
         c4 = cell['cycles']['4']
         c5 = cell['cycles']['5']
         dQ_5_4 = c5['Qdlin'] - c4['Qdlin']
@@ -152,6 +155,25 @@ def build_feature_df(batch_dict):
         variance_dQ_5_4[i] = np.log(np.var(dQ_5_4))
         cycle_550_clf[i] = cell['cycle_life'] >= 550
         
+        # Supplementary Paper Features
+        for j in range(20,110,10):
+            # surfFit_p1
+            # surfFit_p2
+            # surfFit_p3
+            q_c_2 = cell['cycles']['2']['Qd']
+            q_c_last = cell['cycles'][j]['Qd']
+            chargetime = np.mean(cell['summary']['chargetime'][1:j])
+            t_max = np.max(cell['summary']['Tmax'][1:j])
+            delta_Q = cell['cycles'][j]['Qdlin'] - cell['cycles'][2]['Qdlin']
+            log_delta_Q_mean = np.log(np.abs(np.mean(delta_Q)))
+            log_delta_Q_var = np.log(np.abs(np.var(delta_Q)))
+            ir =  cell['cycles'][j]['IR'] - cell['cycles'][2]['IR']
+            log_IR_mean = np.log(np.abs(np.mean(ir)))
+            log_IR_var = np.log(np.abs(np.var(ir)))
+
+        # log_slope_2pt9V_corr
+        # log_int_2pt9V_corr
+        log_int_2pt9V_corr_features = qdlin29_features(cell)
 
     features_df = pd.DataFrame({
         "cell_key": np.array(list(batch_dict.keys())),
@@ -172,13 +194,49 @@ def build_feature_df(batch_dict):
         "cycle_550_clf": cycle_550_clf
     })
 
-    print("Done building features")
-    return features_df
+    # supp_features_df = pd.DataFrame({
+    #     ...
+    #     })
+
+    print("Done building features and supplementary features")
+    return features_df, supp_features_df
+
+
+##
+# Helper functions for supplemental features
+
+Qdlin_idx2pt9 = 400 ## index in voltage steps corresponding to 2.9V
+def qdlin29_features(cell):
+    """
+        TODO WENDY document
+    """
+    summary = cell['summary']
+    cycles  = cell['cycles']
+    qdlin29s = np.zeros(len(cycles.keys()))
+    # collect data point from each cycle
+    for i, cycle in enumerate(cycles.values()):
+        if i==0:
+            continue
+        qdlin29s[i] = cycle['Qdlin'][Qdlin_idx2pt9]
+    # fit line through points, for each length of prediction cycle
+    slopes_ints = list()
+    for j in range(20,110,10):
+        steps = summary['cycle'][2:j].reshape(-1, 1)
+        qdlin29_pts = (qdlin29s[2:j]-qdlin29s[2]).reshape(-1,1)  # subtract baseline (cycle 2)
+        qdlin29_smooth = LinearRegression().fit(steps, qdlin29_pts)
+        slopes_ints.append((*qdlin29_smooth.coef_[0], *qdlin29_smooth.intercept_))
+    # return slopes, intercepts
+    return np.log(np.abs(slopes_ints))
+
 
 if __name__ == "__main__":
     all_batches_dict = load_batches_to_dict()
-    features_df = build_feature_df(all_batches_dict)
+    features_df, supp_features_df = build_feature_df(all_batches_dict)
 
     save_csv_path = join(DATA_DIR, "rebuild_features.csv")
     features_df.to_csv(save_csv_path, index=False)
     print("Saved features to ", save_csv_path)
+
+    save_csv_path_supp = Path("Data/rebuild_features_supp.csv")
+    supp_features_df.to_csv(save_csv_path_supp, index=False)
+    print("Saved supplementary features to ", save_csv_path_supp)
