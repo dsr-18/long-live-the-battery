@@ -161,6 +161,21 @@ def drop_cycle_big_t_outliers(std_multiple_threshold, Qd, T, V, t, t_diff_outlie
 
 
 def drop_outliers_starting_left(std_multiple_threshold, Qd, T, V, t):
+    """Searches for outliers in Qd, T, V and t and drops them one by one starting with the smallest index.
+    Outlier indeces are dropped from every array simultaniously, so the sizes still match.
+    After the first outliers from every array have been dropped, outliers are computed again, to not drop
+    false detections.
+    
+    Arguments:
+        std_multiple_threshold {int} -- Threshold for the compute_outlier_dict function
+        Qd {numpy.ndarray} -- Qd measurements
+        T {numpy.ndarray} -- T measurements
+        V {numpy.ndarray} -- V measurements
+        t {numpy.ndarray} -- t measurements
+    
+    Returns:
+        tuple of numpy.ndarrays -- All arrays without outliers
+    """
     Qd_, T_, V_, t_ = Qd.copy(), T.copy(), V.copy(), t.copy()
     
     # Initialize and compute outliers
