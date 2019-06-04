@@ -1,9 +1,10 @@
 import os
-import glob
 from tensorflow.train import FloatList, Int64List, Feature, Features, Example
 import tensorflow as tf
 
+
 TFR_DIR = "data/tfrecords/"
+
 
 def get_cycle_example(cell, idx):
     """
@@ -129,7 +130,7 @@ def create_dataset(data_dir=TFR_DIR, cycle_length=4, num_parallel_calls=4,
     interleaves them the same way, and so on until it runs out of file paths.
     Note: Even with parallel calls specified, data within batches is sequential.
     """
-    filepaths = glob.glob(os.path.join(data_dir + "*.tfrecord"))
+    filepaths = os.path.join(data_dir + "*.tfrecord")
     filepath_dataset = tf.data.Dataset.list_files(filepaths)
     assembled_dataset = filepath_dataset.interleave(get_create_cell_dataset_from_tfrecords(window_size, shift, stride,
                                                                                            drop_remainder,
