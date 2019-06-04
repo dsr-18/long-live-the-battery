@@ -19,6 +19,7 @@ class OutlierException(Exception):
         super().__init__(message)
         self.outlier_dict = outlier_dict
 
+
 def check_for_drop_warning(array_before, array_after, drop_warning_thresh=0.10):
     """Checks weather the size of array_after is "drop_warning_thresh"-percent
     smaller than array_before and issues a warning in that case."""
@@ -621,7 +622,7 @@ def describe_results_dict(results_dict):
 def main():
     from rebuilding_features import load_batches_to_dict
     
-    batch1 = load_batches_to_dict(amount_to_load=2)    
+    batch1 = load_batches_to_dict(amount_to_load=3)    
 
     results, cycles_drop_info = preprocess_batch(batch1, return_original_data=True, return_cycle_drop_info=True, verbose=True)
     pprint(cycles_drop_info)
