@@ -1,12 +1,16 @@
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import savgol_filter
+import pickle
+from os.path import join
 from plotly import tools
 import plotly.offline as pyo
 import plotly.graph_objs as go
 import warnings
 from pprint import pprint
 
+
+SAVE_DIR = join("data", "processed_data.pkl")
 
 class DropCycleException(Exception):
     """Used for dropping whole cycles without additional information."""
@@ -442,6 +446,7 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
     batch_results = dict()
     cycles_drop_info = dict()
     
+    print("Start processing data ...")
     for cell_key, cell_value in batch_dict.items():
         
         # Initialite the cell results with all available scalar values.
@@ -520,6 +525,7 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
     cycles_drop_info["number_distinct_cycles"] = sum([len(value) for key, value in cycles_drop_info.items()
                                                       if key != "number_distinct_cells"])
 
+    print("Done processing data.")
     if return_cycle_drop_info:
         return batch_results, cycles_drop_info
     else:
@@ -583,6 +589,7 @@ def plot_preprocessing_results(cycle_results_dict, inline=True):
 
 
 def describe_results_dict(results_dict):
+    print("Collecting results data and printing results ...")
     describe_dict = dict()
     
     cycle_life_list = [cell["cycle_life"] for cell in results_dict.values()]
@@ -619,15 +626,29 @@ def describe_results_dict(results_dict):
     pprint(describe_dict)
 
 
+def save_preprocessed_data(results_dict, save_dir=SAVE_DIR):
+    print("Saving preprocessed data to {}".format(save_dir))
+    with open(save_dir, 'wb') as fp:
+        pickle.dump(bat_dict, fp)
+    
+
+def load_preprocessed_data(save_dir=SAVE_DIR):
+    print("Loading preprocessed data from {}".format(save_dir))
+    with open(save_dir, 'rb') as f:
+        return pickle.load(f)
+
+
 def main():
     from rebuilding_features import load_batches_to_dict
     
-    batch1 = load_batches_to_dict(amount_to_load=3)    
+    batch_dict = load_batches_to_dict(amount_to_load=3)    
 
-    results, cycles_drop_info = preprocess_batch(batch1, return_original_data=True, return_cycle_drop_info=True, verbose=True)
+    results, cycles_drop_info = preprocess_batch(batch_dict, return_original_data=True, return_cycle_drop_info=True, verbose=True)
     pprint(cycles_drop_info)
     describe_results_dict(results)
+    
+    save_preprocessed_data(results)
     print("Done!")
-
+    
 if __name__ == "__main__":
     main()
