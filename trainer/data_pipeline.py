@@ -1,11 +1,8 @@
-import glob
 import pickle
 import os
 
 import tensorflow as tf
 from tensorflow.train import FloatList, Int64List, Feature, Features, Example
-
-TFR_DIR = os.path.join("data", "tfrecords")
 
 
 def get_cycle_example(cell_value, summary_idx, cycle_idx):
@@ -219,12 +216,13 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
     return create_cell_dataset_from_tfrecords
 
 
-def create_dataset(data_dir=TFR_DIR, cycle_length=4, num_parallel_calls=4,
+def create_dataset(data_dir, cycle_length=4, num_parallel_calls=4,
                    window_size=5, shift=1, stride=1, drop_remainder=True, batch_size=10, shuffle=True,
                    preprocessed=True):
     """
-    Creates a dataset from all .tfrecord files in the data directory. The dataset will augment the original data by
-    creating windows of loading cycles.
+    Creates a dataset from .tfrecord files in the data directory. Expects a regular expression
+    to capture multiple files (e.g. "data/tfrecords/train/*tfrecord").
+    The dataset will augment the original data by creating windows of loading cycles.
 
     To load unprocessed data, set "preprocessed" to False.
 
@@ -236,8 +234,7 @@ def create_dataset(data_dir=TFR_DIR, cycle_length=4, num_parallel_calls=4,
     interleaves them the same way, and so on until it runs out of file paths.
     Even with parallel calls specified, data within batches is sequential.
     """
-    filepaths = glob.glob(os.path.join(data_dir, "*.tfrecord"))
-    filepath_dataset = tf.data.Dataset.list_files(filepaths)
+    filepath_dataset = tf.data.Dataset.list_files(data_dir)
     assembled_dataset = filepath_dataset.interleave(get_create_cell_dataset_from_tfrecords(window_size, shift, stride,
                                                                                            drop_remainder,
                                                                                            batch_size, shuffle,
@@ -248,6 +245,7 @@ def create_dataset(data_dir=TFR_DIR, cycle_length=4, num_parallel_calls=4,
     return assembled_dataset
 
 
+# dev method
 def load_train_test_split():
     """
     Loads a train_test_split dict that divides all cell names into three lists,
@@ -257,6 +255,7 @@ def load_train_test_split():
     return pickle.load(open("train_test_split.pkl", "rb"))
 
 
+# dev method
 def load_processed_battery_data():
     return pickle.load(open("data/processed_data.pkl", "rb"))
 
