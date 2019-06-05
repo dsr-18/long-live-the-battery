@@ -31,18 +31,23 @@ def get_args():
       default=TFRECORDS_DIR_LOCAL,
       help='local or GCS location for reading TFRecord files')
   parser.add_argument(
+      '--tboard-dir',
+      type=str,
+      default=TB_LOG_DIR_LOCAL,
+      help='local or GCS location for reading TFRecord files')
+  parser.add_argument(
       '--num-epochs',
       type=int,
-      default=20,
-      help='number of times to go through the data, default=20')
+      default=3,
+      help='number of times to go through the data, default=3')
   parser.add_argument(
       '--batch-size',
-      default=128,
+      default=128,      # NOT USED RIGHT NOW
       type=int,
       help='number of records to read during each training step, default=128')
   parser.add_argument(
       '--learning-rate',
-      default=.01,
+      default=.01,      # NOT USED RIGHT NOW
       type=float,
       help='learning rate for gradient descent, default=.01')
   parser.add_argument(
@@ -69,21 +74,19 @@ def train_and_evaluate(args):
   # create model
   model = split_model.create_keras_model(args)
   
-  # tensorboard callback  
-  tensorboard_log = tf.keras.callbacks.TensorBoard(log_dir=TB_LOG_DIR_LOCAL, histogram_freq=0,
+  # tensorboard callback
+  tensorboard_log = tf.keras.callbacks.TensorBoard(log_dir=args.tboard_dir, histogram_freq=0,
                                                    write_graph=True, write_images=True)
 
   # train model
   model.fit(
     dataset, 
-    epochs=3, 
-    steps_per_epoch=4,
+    epochs=args.num_epochs,
+    steps_per_epoch=3000,
     verbose=1,
     callbacks=[tensorboard_log])
   
-  # export saved model to GCS bucket
-  # https://www.tensorflow.org/alpha/tutorials/keras/save_and_restore_models
-  # TODO doesn't work yet: need to set up permissions
+  # export saved model
   saved_model_path = os.path.join(args.job_dir, "saved_models/{}".format(int(time.time())))  
   tf.keras.experimental.export_saved_model(model, saved_model_path)
   print('Model should export to: ', saved_model_path)
