@@ -216,7 +216,7 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
 
 def create_dataset(data_dir, cycle_length=4, num_parallel_calls=4,
                    window_size=5, shift=1, stride=1, drop_remainder=True, batch_size=10, shuffle=True,
-                   preprocessed=True):
+                   preprocessed=True, repeat=True):
     """
     Creates a dataset from .tfrecord files in the data directory. Expects a regular expression
     to capture multiple files (e.g. "data/tfrecords/train/*tfrecord").
@@ -241,7 +241,9 @@ def create_dataset(data_dir, cycle_length=4, num_parallel_calls=4,
                                                     num_parallel_calls=num_parallel_calls)
     if shuffle:
         assembled_dataset = assembled_dataset.shuffle(1000)
-    return assembled_dataset.repeat()
+    if repeat:
+        assembled_dataset = assembled_dataset.repeat()
+    return assembled_dataset
 
 
 # dev method
