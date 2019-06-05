@@ -48,7 +48,7 @@ def get_args():
   parser.add_argument(
       '--verbosity',
       choices=['DEBUG', 'ERROR', 'FATAL', 'INFO', 'WARN'],
-      default='INFO')
+      default='DEBUG')
   args, _ = parser.parse_known_args()
   return args
 
@@ -76,8 +76,8 @@ def train_and_evaluate(args):
   # train model
   model.fit(
     dataset, 
-    epochs=3, 
-    steps_per_epoch=4,
+    epochs=3,
+    steps_per_epoch=10000,
     verbose=1,
     callbacks=[tensorboard_log])
   

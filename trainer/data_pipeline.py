@@ -189,7 +189,7 @@ def get_prep_flatten_windows(window_size):
     return prep_flatten_windows
 
 
-def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_remainder, batch_size, shuffle,
+def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_remainder, batch_size,
                                            preprocessed=True):
     def create_cell_dataset_from_tfrecords(file):
         """
@@ -210,8 +210,6 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
             dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=drop_remainder)
             dataset = dataset.flat_map(get_flatten_windows(window_size))
         dataset = dataset.batch(batch_size)
-        if shuffle:
-            dataset = dataset.shuffle(1000)
         return dataset
     return create_cell_dataset_from_tfrecords
 
@@ -237,12 +235,13 @@ def create_dataset(data_dir, cycle_length=4, num_parallel_calls=4,
     filepath_dataset = tf.data.Dataset.list_files(data_dir)
     assembled_dataset = filepath_dataset.interleave(get_create_cell_dataset_from_tfrecords(window_size, shift, stride,
                                                                                            drop_remainder,
-                                                                                           batch_size, shuffle,
+                                                                                           batch_size,
                                                                                            preprocessed),
                                                     cycle_length=cycle_length,
                                                     num_parallel_calls=num_parallel_calls)
-    assembled_dataset = assembled_dataset.shuffle(1000)
-    return assembled_dataset
+    if shuffle:
+        assembled_dataset = assembled_dataset.shuffle(1000)
+    return assembled_dataset.repeat()
 
 
 # dev method
