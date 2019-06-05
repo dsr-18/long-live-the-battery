@@ -19,43 +19,43 @@ def get_args():
     Returns:
     Dictionary of arguments.
   """
-  parser = argparse.ArgumentParser()
-  parser.add_argument(
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
       '--job-dir',
       type=str,
       default=TRAINED_MODEL_DIR_LOCAL,
       help='local or GCS location for writing checkpoints and exporting models')
-  parser.add_argument(
+    parser.add_argument(
       '--tfrecords-dir',
       type=str,
       default=TFRECORDS_DIR_LOCAL,
       help='local or GCS location for reading TFRecord files')
-  parser.add_argument(
+    parser.add_argument(
       '--tboard-dir',
       type=str,
       default=TB_LOG_DIR_LOCAL,
       help='local or GCS location for reading TFRecord files')
-  parser.add_argument(
+    parser.add_argument(
       '--num-epochs',
       type=int,
       default=3,
       help='number of times to go through the data, default=3')
-  parser.add_argument(
+    parser.add_argument(
       '--batch-size',
       default=128,      # NOT USED RIGHT NOW
       type=int,
       help='number of records to read during each training step, default=128')
-  parser.add_argument(
+    parser.add_argument(
       '--learning-rate',
       default=.01,      # NOT USED RIGHT NOW
       type=float,
       help='learning rate for gradient descent, default=.01')
-  parser.add_argument(
+    parser.add_argument(
       '--verbosity',
       choices=['DEBUG', 'ERROR', 'FATAL', 'INFO', 'WARN'],
       default='DEBUG')
-  args, _ = parser.parse_known_args()
-  return args
+    args, _ = parser.parse_known_args()
+    return args
 
 
 def train_and_evaluate(args):
