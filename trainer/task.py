@@ -9,7 +9,7 @@ import split_model
 
 
 TRAINED_MODEL_DIR_LOCAL = './'
-TFRECORDS_DIR_LOCAL = 'data/tfrecords/'
+TFRECORDS_DIR_LOCAL = 'data/tfrecords/train/*tfrecord'
 TB_LOG_DIR_LOCAL = 'Graph'
 
 

@@ -14,7 +14,7 @@ JOB_NAME="ion_age_$now"
 
 # user-specified args
 
-TFRECORDS_DIR="gs://${BUCKET}/data/tfrecords/"
+TFRECORDS_DIR="gs://${BUCKET}/data/tfrecords/train/*tfrecord"
 
 
 gcloud ai-platform jobs submit training $JOB_NAME \
