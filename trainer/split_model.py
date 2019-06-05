@@ -20,6 +20,7 @@ def create_keras_model(args):
   qdlin_in = Input(shape=(window_size, steps, input_dim), name='Qdlin')
   tdlin_in = Input(shape=(window_size, steps, input_dim), name='Tdlin')
   ir_in = Input(shape=(window_size, input_dim), name='IR')
+  # TODO missing discharge time feature
 
   # combine all data from detail level
   detail_concat = concatenate([qdlin_in, tdlin_in], axis=3, name='detail_concat')
