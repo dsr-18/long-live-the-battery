@@ -9,14 +9,14 @@ import split_model
 
 
 TRAINED_MODEL_DIR_LOCAL = './'
-TFRECORDS_DIR_LOCAL = 'data/tfrecords/'
+TFRECORDS_DIR_LOCAL = 'data/tfrecords/train/*tfrecord'
 TB_LOG_DIR_LOCAL = 'Graph'
 
 
 def get_args():
-  """Argument parser.
+    """Argument parser.
 
-  Returns:
+    Returns:
     Dictionary of arguments.
   """
   parser = argparse.ArgumentParser()
@@ -53,45 +53,53 @@ def get_args():
   parser.add_argument(
       '--verbosity',
       choices=['DEBUG', 'ERROR', 'FATAL', 'INFO', 'WARN'],
-      default='INFO')
+      default='DEBUG')
   args, _ = parser.parse_known_args()
   return args
 
+
 def train_and_evaluate(args):
-  """Trains and evaluates the Keras model.
+    """Trains and evaluates the Keras model.
 
-  Uses the Keras model defined in model.py and trains on data loaded and
-  preprocessed in data_pipeline.py. Saves the trained model in TensorFlow SavedModel
-  format to the path defined in part by the --job-dir argument.
+    Uses the Keras model defined in model.py and trains on data loaded and
+    preprocessed in data_pipeline.py. Saves the trained model in TensorFlow SavedModel
+    format to the path defined in part by the --job-dir argument.
 
-  Args:
+    Args:
     args: dictionary of arguments - see get_args() for details
-  """
-  
-  # load dataset
-  dataset = dp.create_dataset(args.tfrecords_dir)
+    """
+    # calculate steps_per_epoch
+    temp_dataset = dp.create_dataset(args.tfrecords_dir, repeat=False)
+    
+    steps_per_epoch = 0
+    for batch in temp_dataset:
+        steps_per_epoch += 1
+    
+    # load dataset
+    dataset = dp.create_dataset(args.tfrecords_dir)
 
-  # create model
-  model = split_model.create_keras_model(args)
-  
-  # tensorboard callback
-  tensorboard_log = tf.keras.callbacks.TensorBoard(log_dir=args.tboard_dir, histogram_freq=0,
-                                                   write_graph=True, write_images=True)
+    # create model
+    model = split_model.create_keras_model(args)
+    
+    # tensorboard callback
+    tensorboard_log = tf.keras.callbacks.TensorBoard(log_dir=args.tboard_dir, histogram_freq=0,
+                                                     write_graph=True, write_images=True)
 
-  # train model
-  model.fit(
-    dataset, 
-    epochs=args.num_epochs,
-    steps_per_epoch=3000,
-    verbose=1,
-    callbacks=[tensorboard_log])
-  
-  # export saved model
-  saved_model_path = os.path.join(args.job_dir, "saved_models/{}".format(int(time.time())))  
-  tf.keras.experimental.export_saved_model(model, saved_model_path)
-  print('Model should export to: ', saved_model_path)
+    # train model
+    model.fit(
+        dataset, 
+        epochs=args.num_epochs,
+        steps_per_epoch=steps_per_epoch,
+        verbose=1,
+        callbacks=[tensorboard_log])
+    
+    # export saved model
+    saved_model_path = os.path.join(args.job_dir, "saved_models/{}".format(int(time.time())))  
+    tf.keras.experimental.export_saved_model(model, saved_model_path)
+    print('Model should export to: ', saved_model_path)
+
 
 if __name__ == '__main__':
-  args = get_args()
-  logging.set_verbosity(args.verbosity)
-  train_and_evaluate(args)
+    args = get_args()
+    logging.set_verbosity(args.verbosity)
+    train_and_evaluate(args)

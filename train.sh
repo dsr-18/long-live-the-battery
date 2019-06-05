@@ -6,7 +6,6 @@ REGION='europe-west1'
 PACKAGE_PATH='trainer/'
 MODULE_NAME='trainer.task'
 
-PACKAGE_STAGING_PATH="gs://${BUCKET}"
 JOB_DIR="gs://${BUCKET}/jobs/"
 
 now=$(date +"%Y%m%d_%H%M%S")
@@ -19,7 +18,6 @@ TBOARD_LOGS_DIR="${JOB_DIR}${JOB_NAME}"
 
 
 gcloud ai-platform jobs submit training $JOB_NAME \
-    --staging-bucket $PACKAGE_STAGING_PATH \
     --job-dir $JOB_DIR  \
     --package-path $PACKAGE_PATH \
     --module-name $MODULE_NAME \
