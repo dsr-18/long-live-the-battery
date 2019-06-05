@@ -327,8 +327,6 @@ def preprocess_cycle(
     Returns:
         {dict} -- Dictionary with the resampled (and original) values. 
     """
-    # TODO: Process all batches before moving on?
-    # TODO: Check with new threshold after processing outliers of std >= 12
 
     Qd = cycle["Qd"]
     T = cycle["T"]
@@ -592,3 +590,7 @@ def main():
     
 if __name__ == "__main__":
     main()
+
+
+# TODO: Process all batches before moving on?
+# TODO: Check with new threshold after processing outliers of std >= 12
