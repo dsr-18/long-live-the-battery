@@ -4,9 +4,10 @@ from absl import logging
 import time
 
 import tensorflow as tf
+from tensorflow.keras.callbacks import TensorBoard
+
 import data_pipeline as dp
 import split_model
-
 
 TRAINED_MODEL_DIR_LOCAL = './'
 TFRECORDS_DIR_LOCAL = 'data/tfrecords/train/*tfrecord'
@@ -42,9 +43,24 @@ def get_args():
       help='number of times to go through the data, default=3')
     parser.add_argument(
       '--batch-size',
-      default=128,      # NOT USED RIGHT NOW
+      default=16,
       type=int,
-      help='number of records to read during each training step, default=128')
+      help='number of records to read during each training step, default=16')
+    parser.add_argument(
+      '--window-size',
+      default=100,
+      type=int,
+      help='window size for sliding window in training sample generation, default=100')
+    parser.add_argument(
+      '--shift',
+      default=20,
+      type=int,
+      help='shift for sliding window in training sample generation, default=1')
+    parser.add_argument(
+      '--stride',
+      default=1,
+      type=int,
+      help='stride inside sliding window in training sample generation, default=1')
     parser.add_argument(
       '--learning-rate',
       default=.01,      # NOT USED RIGHT NOW
@@ -69,21 +85,34 @@ def train_and_evaluate(args):
     args: dictionary of arguments - see get_args() for details
     """
     # calculate steps_per_epoch
-    temp_dataset = dp.create_dataset(args.tfrecords_dir, repeat=False)
-    
+    temp_dataset = dp.create_dataset(
+                        data_dir=args.tfrecords_dir, 
+                        window_size=args.window_size,
+                        shift=args.shift,
+                        stride=args.stride,
+                        batch_size=args.batch_size,
+                        repeat=False)
     steps_per_epoch = 0
     for batch in temp_dataset:
         steps_per_epoch += 1
     
     # load dataset
-    dataset = dp.create_dataset(args.tfrecords_dir)
+    dataset = dp.create_dataset(
+                        data_dir=args.tfrecords_dir, 
+                        window_size=args.window_size,
+                        shift=args.shift,
+                        stride=args.stride,
+                        batch_size=args.batch_size)
 
     # create model
     model = split_model.create_keras_model(args)
     
     # tensorboard callback
-    tensorboard_log = tf.keras.callbacks.TensorBoard(log_dir=args.tboard_dir, histogram_freq=0,
-                                                     write_graph=True, write_images=True)
+    tensorboard_log = TensorBoard(
+                        log_dir=args.tboard_dir, 
+                        histogram_freq=0,
+                        write_graph=True, 
+                        write_images=True)
 
     # train model
     model.fit(
