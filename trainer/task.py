@@ -18,58 +18,58 @@ def get_args():
     """Argument parser.
 
     Returns:
-    Dictionary of arguments.
-  """
+        Dictionary of arguments.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
-      '--job-dir',
-      type=str,
-      default=TRAINED_MODEL_DIR_LOCAL,
-      help='local or GCS location for writing checkpoints and exporting models')
+        '--job-dir',
+        type=str,
+        default=TRAINED_MODEL_DIR_LOCAL,
+        help='local or GCS location for writing checkpoints and exporting models')
     parser.add_argument(
-      '--tfrecords-dir',
-      type=str,
-      default=TFRECORDS_DIR_LOCAL,
-      help='local or GCS location for reading TFRecord files')
+        '--tfrecords-dir',
+        type=str,
+        default=TFRECORDS_DIR_LOCAL,
+        help='local or GCS location for reading TFRecord files')
     parser.add_argument(
-      '--tboard-dir',
-      type=str,
-      default=TB_LOG_DIR_LOCAL,
-      help='local or GCS location for reading TFRecord files')
+        '--tboard-dir',
+        type=str,
+        default=TB_LOG_DIR_LOCAL,
+        help='local or GCS location for reading TFRecord files')
     parser.add_argument(
-      '--num-epochs',
-      type=int,
-      default=3,
-      help='number of times to go through the data, default=3')
+        '--num-epochs',
+        type=int,
+        default=3,
+        help='number of times to go through the data, default=3')
     parser.add_argument(
-      '--batch-size',
-      default=16,
-      type=int,
-      help='number of records to read during each training step, default=16')
+        '--batch-size',
+        default=16,
+        type=int,
+        help='number of records to read during each training step, default=16')
     parser.add_argument(
-      '--window-size',
-      default=100,
-      type=int,
-      help='window size for sliding window in training sample generation, default=100')
+        '--window-size',
+        default=100,
+        type=int,
+        help='window size for sliding window in training sample generation, default=100')
     parser.add_argument(
-      '--shift',
-      default=20,
-      type=int,
-      help='shift for sliding window in training sample generation, default=1')
+        '--shift',
+        default=20,
+        type=int,
+        help='shift for sliding window in training sample generation, default=1')
     parser.add_argument(
-      '--stride',
-      default=1,
-      type=int,
-      help='stride inside sliding window in training sample generation, default=1')
+        '--stride',
+        default=1,
+        type=int,
+        help='stride inside sliding window in training sample generation, default=1')
     parser.add_argument(
-      '--learning-rate',
-      default=.01,      # NOT USED RIGHT NOW
-      type=float,
-      help='learning rate for gradient descent, default=.01')
+        '--learning-rate',
+        default=.01,      # NOT USED RIGHT NOW
+        type=float,
+        help='learning rate for gradient descent, default=.01')
     parser.add_argument(
-      '--verbosity',
-      choices=['DEBUG', 'ERROR', 'FATAL', 'INFO', 'WARN'],
-      default='DEBUG')
+        '--verbosity',
+        choices=['DEBUG', 'ERROR', 'FATAL', 'INFO', 'WARN'],
+        default='DEBUG')
     args, _ = parser.parse_known_args()
     return args
 
