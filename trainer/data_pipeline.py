@@ -74,7 +74,7 @@ def write_to_tfrecords(batteries, data_dir, preprocessed=True, train_test_split=
         # For each split set a new working directory in /Data/tfrecords
         # and write files there
         for split_name, split_indexes in train_test_split.items():
-            split_data_dir = os.path.join(data_dir + split_name + "/")
+            split_data_dir = os.path.join(data_dir, split_name)
             # create directories
             if not os.path.exists(split_data_dir):
                 os.mkdir(split_data_dir)
@@ -266,5 +266,5 @@ if __name__ == "__main__":
     print("Loading battery data...")
     battery_data = load_processed_battery_data()
     print("Start writing to disk...")
-    write_to_tfrecords(battery_data, preprocessed=True, train_test_split=split)
+    write_to_tfrecords(battery_data, "data/tfrecords", preprocessed=True, train_test_split=split)
     print("Done.")
