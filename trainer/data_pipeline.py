@@ -46,7 +46,7 @@ def get_preprocessed_cycle_example(cell_value, summary_idx, cycle_idx):
     return cycle_example
 
 
-def write_to_tfrecords(batteries, data_dir=TFR_DIR, preprocessed=True, train_test_split=None):
+def write_to_tfrecords(batteries, data_dir, preprocessed=True, train_test_split=None):
     """
     Takes battery data in dict format as input and writes a set of tfrecords files to disk.
 
