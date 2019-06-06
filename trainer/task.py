@@ -8,11 +8,9 @@ import tensorflow as tf
 
 import data_pipeline as dp
 import split_model
+from constants import train_set, test_set, tensorboard_dir, trained_model_dir
 
-# location constants for local runs
-TRAINED_MODEL_DIR_LOCAL = './'
-TFRECORDS_DIR_TRAIN_LOCAL = 'data/tfrecords/train/*tfrecord'
-TFRECORDS_DIR_VALIDATE_LOCAL = 'data/tfrecords/test/*tfrecord'
+
 TB_LOG_DIR_LOCAL = 'Graph'
 SAVED_MODEL_DIR_LOCAL = 'saved_models'
 
@@ -27,17 +25,17 @@ def get_args():
     parser.add_argument(
         '--job-dir',
         type=str,
-        default=TRAINED_MODEL_DIR_LOCAL,
+        default=trained_model_dir,
         help='local or GCS location for writing checkpoints and exporting models')
     parser.add_argument(
         '--data-dir-train',
         type=str,
-        default=TFRECORDS_DIR_TRAIN_LOCAL,
+        default=train_set,
         help='local or GCS location for reading TFRecord files for the training set')
     parser.add_argument(
         '--data-dir-validate',
         type=str,
-        default=TFRECORDS_DIR_VALIDATE_LOCAL,
+        default=test_set,
         help='local or GCS location for reading TFRecord files for the validation set')
     parser.add_argument(
         '--tboard-dir',         # no default so we can construct dynamically with timestamp
@@ -118,7 +116,7 @@ def train_and_evaluate(args):
     args: dictionary of arguments - see get_args() for details
     """
 
-    # calculate steps_per_epoch - This throws an error while running locally
+    # calculate steps_per_epoch
     temp_dataset = dp.create_dataset(
                         data_dir=args.data_dir_train,
                         window_size=args.window_size,
