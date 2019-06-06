@@ -16,8 +16,8 @@ TRAIN_TEST_SPLIT = "train_test_split.pkl"  # file location for train/test split 
 PROCESSED_DATA = join("data", "processed_data.pkl")  # file location for processed data
 DATASETS_DIR = join("data", "tfrecords")  # base directory to write tfrecord files in
 TENSORBOARD_DIR = "Graph"  # base directory to write tensorboard logs in
-TRAINED_MODEL_DIR = "./"  # base directory to save trained model in
+SAVED_MODELS_DIR_LOCAL = "saved_models" # base directory to save trained model in
+BASE_DIR = "./"  # home directory
 TRAIN_SET = join("data", "tfrecords", "train", "*tfrecord")  # regexp files for the training set
 TEST_SET = join("data", "tfrecords", "test", "*tfrecord")  # regexp for the test set
 SECONDARY_TEST_SET = join("data", "tfrecords", "secondary_test", "*tfrecord")  # regexp for the secondary test set
-
