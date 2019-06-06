@@ -3,14 +3,10 @@ from tensorflow.keras.models import Model
 
 # TODO use the args
 def create_keras_model(args):
-  """Trains and evaluates the Keras model.
-
-  Uses the Keras model defined in model.py and trains on data loaded and
-  preprocessed in data_pipeline.py. Saves the trained model in TensorFlow SavedModel
-  format to the path defined in part by the --job-dir argument.
-
+  """Creates the Keras model.
+  
   Args:
-    args: dictionary of arguments - see get_args() for details
+    window_size: [...]
   """
   window_size = 5
   steps = 1000

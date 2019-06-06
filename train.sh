@@ -18,7 +18,7 @@ JOB_NAME="ion_age_$now"
 TFRECORDS_DIR="gs://${BUCKET}/data/tfrecords/train/*tfrecord"
 
 # trying to put TensorBoard logs in individual run dirs
-TBOARD_LOGS_DIR="${PACKAGE_STAGING_PATH}${JOB_NAME}"
+TBOARD_LOGS_DIR="${PACKAGE_STAGING_PATH}/${JOB_NAME}"
 
 
 gcloud ai-platform jobs submit training $JOB_NAME \

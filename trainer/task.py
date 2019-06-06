@@ -55,7 +55,7 @@ def get_args():
         '--shift',
         default=20,
         type=int,
-        help='shift for sliding window in training sample generation, default=1')
+        help='shift for sliding window in training sample generation, default=20')
     parser.add_argument(
         '--stride',
         default=1,
