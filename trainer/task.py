@@ -8,7 +8,7 @@ import tensorflow as tf
 
 import data_pipeline as dp
 import split_model
-from constants import train_set, test_set, tensorboard_dir, trained_model_dir
+from constants import train_set, test_set, tensorboard_dir, base_dir
 
 
 TB_LOG_DIR_LOCAL = 'Graph'
@@ -25,7 +25,7 @@ def get_args():
     parser.add_argument(
         '--job-dir',
         type=str,
-        default=trained_model_dir,
+        default=base_dir,
         help='local or GCS location for writing checkpoints and exporting models')
     parser.add_argument(
         '--data-dir-train',
