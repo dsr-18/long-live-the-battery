@@ -8,11 +8,7 @@ import tensorflow as tf
 
 import data_pipeline as dp
 import split_model
-from constants import train_set, tensorboard_dir, trained_model_dir
-
-TRAINED_MODEL_DIR_LOCAL = trained_model_dir
-TFRECORDS_DIR_LOCAL = train_set
-TB_LOG_DIR_LOCAL = os.path.join(tensorboard_dir, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+from constants import train_set, test_set, tensorboard_dir, base_dir, saved_model_dir_local
 
 
 def get_args():
@@ -25,18 +21,26 @@ def get_args():
     parser.add_argument(
         '--job-dir',
         type=str,
-        default=TRAINED_MODEL_DIR_LOCAL,
+        default=base_dir,
         help='local or GCS location for writing checkpoints and exporting models')
     parser.add_argument(
-        '--tfrecords-dir',
+        '--data-dir-train',
         type=str,
-        default=TFRECORDS_DIR_LOCAL,
-        help='local or GCS location for reading TFRecord files')
+        default=train_set,
+        help='local or GCS location for reading TFRecord files for the training set')
     parser.add_argument(
-        '--tboard-dir',
+        '--data-dir-validate',
         type=str,
-        default=TB_LOG_DIR_LOCAL,
+        default=test_set,
+        help='local or GCS location for reading TFRecord files for the validation set')
+    parser.add_argument(
+        '--tboard-dir',         # no default so we can construct dynamically with timestamp
+        type=str,
         help='local or GCS location for reading TensorBoard files')
+    parser.add_argument(
+        '--saved-model-dir',    # no default so we can construct dynamically with timestamp
+        type=str,
+        help='local or GCS location for saving trained Keras models')
     parser.add_argument(
         '--num-epochs',
         type=int,
@@ -107,21 +111,21 @@ def train_and_evaluate(args):
     Args:
     args: dictionary of arguments - see get_args() for details
     """
-    temp_dataset = dp.create_dataset(
-                        data_dir=args.tfrecords_dir,
+
+    # calculate steps_per_epoch_train, steps_per_epoch_test
+    steps_per_epoch_train = calculate_steps_per_epoch(args.data_dir_train)
+    steps_per_epoch_validate = calculate_steps_per_epoch(args.data_dir_validate)
+    
+    # load datasets
+    dataset_train = dp.create_dataset(
+                        data_dir=args.data_dir_train,
                         window_size=args.window_size,
                         shift=args.shift,
                         stride=args.stride,
-                        batch_size=args.batch_size,
-                        repeat=False)
-    steps_per_epoch = 0
-    for batch in temp_dataset:
-        steps_per_epoch += 1
-    # steps_per_epoch = 2000
-    
-    # load dataset
-    dataset = dp.create_dataset(
-                        data_dir=args.tfrecords_dir,
+                        batch_size=args.batch_size)
+
+    dataset_validate = dp.create_dataset(
+                        data_dir=args.data_dir_validate,
                         window_size=args.window_size,
                         shift=args.shift,
                         stride=args.stride,
@@ -132,8 +136,14 @@ def train_and_evaluate(args):
                                            loss=args.loss,
                                            optimizer=args.optimizer)
 
+    run_timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    if args.tboard_dir is None:
+        tboard_dir = os.path.join(tensorboard_dir, run_timestr)
+    else:
+        tboard_dir = args.tboard_dir
+
     callbacks = [
-        tf.keras.callbacks.TensorBoard(log_dir=args.tboard_dir,
+        tf.keras.callbacks.TensorBoard(log_dir=tboard_dir,
                                        write_graph=True,
                                        histogram_freq=0,
                                        write_images=True),
@@ -146,16 +156,34 @@ def train_and_evaluate(args):
 
     # train model
     model.fit(
-        dataset, 
+        dataset_train, 
         epochs=args.num_epochs,
-        steps_per_epoch=steps_per_epoch,
+        steps_per_epoch=steps_per_epoch_train,
+        validation_data=dataset_validate,
+        validation_steps=steps_per_epoch_validate,
         verbose=1,
         callbacks=callbacks)
     
     # export saved model
-    saved_model_path = os.path.join(args.job_dir, "saved_models/{}".format(int(time.time())))  
-    tf.keras.experimental.export_saved_model(model, saved_model_path)
-    print('Model should export to: ', saved_model_path)
+    if args.saved_model_dir is None:
+        saved_model_dir = os.path.join(saved_model_dir_local, run_timestr)
+    else:
+        saved_model_dir = args.saved_model_dir
+    tf.keras.experimental.export_saved_model(model, saved_model_dir)
+
+
+def calculate_steps_per_epoch(dataset, window_size=args.window_size, shift=args.shift, stride=args.stride, batch_size=args.batch_size):
+    temp_dataset = dp.create_dataset(
+                        data_dir=dataset,
+                        window_size=window_size,
+                        shift=shift,
+                        stride=stride,
+                        batch_size=batch_size,
+                        repeat=False)
+    steps_per_epoch = 0
+    for batch in temp_dataset:
+        steps_per_epoch += 1
+    return steps_per_epoch
 
 
 if __name__ == '__main__':
