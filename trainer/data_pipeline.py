@@ -4,6 +4,9 @@ import os
 import tensorflow as tf
 from tensorflow.train import FloatList, Int64List, Feature, Features, Example
 
+from constants import steps, input_dim, train_test_split, processed_data, datasets_dir
+from constants import internal_resistance_name, discharge_time_name, qdlin_name, tdlin_name, remaining_cycles_name
+
 
 def get_cycle_example(cell_value, summary_idx, cycle_idx):
     """
@@ -13,10 +16,10 @@ def get_cycle_example(cell_value, summary_idx, cycle_idx):
     cycle_example = Example(
         features=Features(
             feature={
-                "IR": Feature(float_list=FloatList(value=[cell_value["summary"]["IR"][summary_idx]])),
-                "Qdlin": Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["Qdlin"])),
-                "Tdlin": Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["Tdlin"])),
-                "Remaining_cycles": Feature(float_list=FloatList(value=[(cell_value["cycle_life"] - int(summary_idx))]))
+                internal_resistance_name: Feature(float_list=FloatList(value=[cell_value["summary"]["IR"][summary_idx]])),
+                qdlin_name: Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["Qdlin"])),
+                tdlin_name: Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["Tdlin"])),
+                remaining_cycles_name: Feature(float_list=FloatList(value=[(cell_value["cycle_life"] - int(summary_idx))]))
             }
         )
     )
@@ -30,15 +33,15 @@ def get_preprocessed_cycle_example(cell_value, summary_idx, cycle_idx):
     cycle_example = Example(
         features=Features(
             feature={
-                "IR":
+                internal_resistance_name:
                     Feature(float_list=FloatList(value=[cell_value["summary"]["IR"][summary_idx]])),
-                "Remaining_cycles":
+                remaining_cycles_name:
                     Feature(float_list=FloatList(value=[cell_value["summary"]["remaining_cycle_life"][summary_idx]])),
-                "Discharge_time":
+                discharge_time_name:
                     Feature(float_list=FloatList(value=[cell_value["summary"]["high_current_discharging_time"][summary_idx]])),
-                "Qdlin":
+                qdlin_name:
                     Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["Qd_resample"])),
-                "Tdlin":
+                tdlin_name:
                     Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["T_resample"]))
             }
         )
@@ -111,13 +114,13 @@ def parse_features(example_proto):
     with tensorflow.feature_columns.make_parse_example_spec().
     """
     feature_description = {
-        'IR': tf.io.FixedLenFeature([1, ], tf.float32),
-        'Tdlin': tf.io.FixedLenFeature([1000, 1], tf.float32),
-        'Qdlin': tf.io.FixedLenFeature([1000, 1], tf.float32),
-        'Remaining_cycles': tf.io.FixedLenFeature([], tf.float32)
+        internal_resistance_name: tf.io.FixedLenFeature([1, ], tf.float32),
+        tdlin_name: tf.io.FixedLenFeature([steps, input_dim], tf.float32),
+        qdlin_name: tf.io.FixedLenFeature([steps, input_dim], tf.float32),
+        remaining_cycles_name: tf.io.FixedLenFeature([], tf.float32)
     }
     examples = tf.io.parse_single_example(example_proto, feature_description)
-    targets = examples.pop("Remaining_cycles")
+    targets = examples.pop(remaining_cycles_name)
     return examples, targets
 
 
@@ -126,14 +129,14 @@ def parse_preprocessed_features(example_proto):
     Same as above, but with preprocessed features.
     """
     feature_description = {
-        'IR': tf.io.FixedLenFeature([1, ], tf.float32),
-        'Discharge_time': tf.io.FixedLenFeature([1, ], tf.float32),
-        'Remaining_cycles': tf.io.FixedLenFeature([], tf.float32),
-        'Tdlin': tf.io.FixedLenFeature([1000, 1], tf.float32),
-        'Qdlin': tf.io.FixedLenFeature([1000, 1], tf.float32)
+        internal_resistance_name: tf.io.FixedLenFeature([1, ], tf.float32),
+        discharge_time_name: tf.io.FixedLenFeature([1, ], tf.float32),
+        remaining_cycles_name: tf.io.FixedLenFeature([], tf.float32),
+        tdlin_name: tf.io.FixedLenFeature([steps, input_dim], tf.float32),
+        qdlin_name: tf.io.FixedLenFeature([steps, input_dim], tf.float32)
     }
     examples = tf.io.parse_single_example(example_proto, feature_description)
-    targets = examples.pop("Remaining_cycles")
+    targets = examples.pop(remaining_cycles_name)
     return examples, targets
 
 
@@ -147,15 +150,15 @@ def get_flatten_windows(window_size):
         length=window_size.
         """
         # Select all rows for each feature
-        qdlin = features["Qdlin"].batch(window_size)
-        tdlin = features["Tdlin"].batch(window_size)
-        ir = features["IR"].batch(window_size)
+        qdlin = features[qdlin_name].batch(window_size)
+        tdlin = features[tdlin_name].batch(window_size)
+        ir = features[internal_resistance_name].batch(window_size)
         # the names in this dict have to match the names of the Input objects in
         # our final model
         features_flat = {
-            "Qdlin": qdlin,
-            "Tdlin": tdlin,
-            "IR": ir
+            qdlin_name: qdlin,
+            tdlin_name: tdlin,
+            internal_resistance_name: ir
         }
         # For every window we want to have one target/label
         # so we only get the last row by skipping all but one row
@@ -170,17 +173,17 @@ def get_prep_flatten_windows(window_size):
         Same as above, but with the preprocessed data.
         """
         # Select all rows for each feature
-        qdlin = features["Qdlin"].batch(window_size)
-        tdlin = features["Tdlin"].batch(window_size)
-        ir = features["IR"].batch(window_size)
-        dc_time = features["Discharge_time"].batch(window_size)
+        qdlin = features[qdlin_name].batch(window_size)
+        tdlin = features[tdlin_name].batch(window_size)
+        ir = features[internal_resistance_name].batch(window_size)
+        dc_time = features[discharge_time_name].batch(window_size)
         # the names in this dict have to match the names of the Input objects in
         # our final model
         features_flat = {
-            "Qdlin": qdlin,
-            "Tdlin": tdlin,
-            "IR": ir,
-            "Discharge_time": dc_time
+            qdlin_name: qdlin,
+            tdlin_name: tdlin,
+            internal_resistance_name: ir,
+            discharge_time_name: dc_time
         }
         # For every window we want to have one target/label
         # so we only get the last row by skipping all but one row
@@ -254,12 +257,12 @@ def load_train_test_split():
     recreating the splits from the original paper.
     This can be passed directly to "write_to_tfrecords()" as an argument.
     """
-    return pickle.load(open("train_test_split.pkl", "rb"))
+    return pickle.load(open(train_test_split, "rb"))
 
 
 # dev method
 def load_processed_battery_data():
-    return pickle.load(open("data/processed_data.pkl", "rb"))
+    return pickle.load(open(processed_data, "rb"))
 
 
 if __name__ == "__main__":
@@ -269,5 +272,5 @@ if __name__ == "__main__":
     print("Loading battery data...")
     battery_data = load_processed_battery_data()
     print("Start writing to disk...")
-    write_to_tfrecords(battery_data, "data/tfrecords", preprocessed=True, train_test_split=split)
+    write_to_tfrecords(battery_data, datasets_dir, preprocessed=True, train_test_split=split)
     print("Done.")
