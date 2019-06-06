@@ -8,7 +8,9 @@ import tensorflow as tf
 
 import data_pipeline as dp
 import split_model
-from constants import train_set, test_set, tensorboard_dir, base_dir, saved_model_dir_local
+
+import constants as cst
+
 
 
 def get_args():
@@ -21,17 +23,17 @@ def get_args():
     parser.add_argument(
         '--job-dir',
         type=str,
-        default=base_dir,
+        default=cst.BASE_DIR,
         help='local or GCS location for writing checkpoints and exporting models')
     parser.add_argument(
         '--data-dir-train',
         type=str,
-        default=train_set,
+        default=cst.TRAIN_SET,
         help='local or GCS location for reading TFRecord files for the training set')
     parser.add_argument(
         '--data-dir-validate',
         type=str,
-        default=test_set,
+        default=cst.TEST_SET,
         help='local or GCS location for reading TFRecord files for the validation set')
     parser.add_argument(
         '--tboard-dir',         # no default so we can construct dynamically with timestamp
@@ -138,7 +140,7 @@ def train_and_evaluate(args):
 
     run_timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     if args.tboard_dir is None:
-        tboard_dir = os.path.join(tensorboard_dir, run_timestr)
+        tboard_dir = os.path.join(cst.TENSORBOARD_DIR, run_timestr)
     else:
         tboard_dir = args.tboard_dir
 
@@ -166,7 +168,7 @@ def train_and_evaluate(args):
     
     # export saved model
     if args.saved_model_dir is None:
-        saved_model_dir = os.path.join(saved_model_dir_local, run_timestr)
+        saved_model_dir = os.path.join(cst.SAVED_MODEL_DIR_LOCAL, run_timestr)
     else:
         saved_model_dir = args.saved_model_dir
     tf.keras.experimental.export_saved_model(model, saved_model_dir)
