@@ -20,7 +20,7 @@ def print_dict_keys(print_dict, a=0, ident=2, max_depth=100):
             print_dict_keys(value, a+ident, max_depth=max_depth)
             
 
-def simple_plotly(x, **kwargs, inline=False):
+def simple_plotly(x, inline=False, **kwargs):
     """Plots a simple plotly plot for all keyword arguments over x.
     Keayword arguments are used for naming the different traces."""
     
