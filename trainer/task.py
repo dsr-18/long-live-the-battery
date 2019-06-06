@@ -35,7 +35,7 @@ def get_args():
         '--tboard-dir',
         type=str,
         default=TB_LOG_DIR_LOCAL,
-        help='local or GCS location for reading TFRecord files')
+        help='local or GCS location for reading TensorBoard files')
     parser.add_argument(
         '--num-epochs',
         type=int,
@@ -70,6 +70,28 @@ def get_args():
         '--verbosity',
         choices=['DEBUG', 'ERROR', 'FATAL', 'INFO', 'WARN'],
         default='DEBUG')
+    parser.add_argument(
+        '--loss',
+        default='mean_squared_error',
+        type=str,
+        help='loss function used by the model, default=mean_squared_error')
+    parser.add_argument(
+        '--optimizer',
+        default='adam',
+        type=str,
+        help='optimizer used by the model, default=adam')
+    parser.add_argument(
+        '--shuffle',
+        default=True,
+        type=bool,
+        help='shuffle the batched dataset, default=True'
+    )
+    parser.add_argument(
+        '--shuffle-buffer',
+        default=500,
+        type=int,
+        help='Bigger buffer size means better shuffling but longer setup time.'
+    )
     args, _ = parser.parse_known_args()
     return args
 
@@ -84,35 +106,43 @@ def train_and_evaluate(args):
     Args:
     args: dictionary of arguments - see get_args() for details
     """
-    # calculate steps_per_epoch
-    temp_dataset = dp.create_dataset(
-                        data_dir=args.tfrecords_dir, 
-                        window_size=args.window_size,
-                        shift=args.shift,
-                        stride=args.stride,
-                        batch_size=args.batch_size,
-                        repeat=False)
-    steps_per_epoch = 0
-    for batch in temp_dataset:
-        steps_per_epoch += 1
+    # calculate steps_per_epoch - This throws an error while running locally
+    # temp_dataset = dp.create_dataset(
+    #                     data_dir=args.tfrecords_dir,
+    #                     window_size=args.window_size,
+    #                     shift=args.shift,
+    #                     stride=args.stride,
+    #                     batch_size=args.batch_size,
+    #                     repeat=False)
+    # steps_per_epoch = 0
+    # for batch in temp_dataset:
+    #     steps_per_epoch += 1
+    steps_per_epoch = 2000
     
     # load dataset
     dataset = dp.create_dataset(
-                        data_dir=args.tfrecords_dir, 
+                        data_dir=args.tfrecords_dir,
                         window_size=args.window_size,
                         shift=args.shift,
                         stride=args.stride,
                         batch_size=args.batch_size)
 
     # create model
-    model = split_model.create_keras_model(args)
-    
-    # tensorboard callback
-    tensorboard_log = TensorBoard(
-                        log_dir=args.tboard_dir, 
-                        histogram_freq=0,
-                        write_graph=True, 
-                        write_images=True)
+    model = split_model.create_keras_model(window_size=args.window_size,
+                                           loss=args.loss,
+                                           optimizer=args.optimizer)
+
+    callbacks = [
+        tf.keras.callbacks.TensorBoard(log_dir=args.tboard_dir,
+                                       write_graph=True,
+                                       histogram_freq=0,
+                                       write_images=True),
+        # More callbacks for testing
+        # tf.keras.callbacks.CSVLogger(os.path.join(args.tboard_dir, 'log.csv')),
+        # tf.keras.callbacks.ModelCheckpoint(os.path.join(args.tboard_dir, 'checkpoint_{epoch:02d}.h5'),
+        #                                    period=5,
+        #                                    save_best_only=True),
+        ]
 
     # train model
     model.fit(
@@ -120,7 +150,7 @@ def train_and_evaluate(args):
         epochs=args.num_epochs,
         steps_per_epoch=steps_per_epoch,
         verbose=1,
-        callbacks=[tensorboard_log])
+        callbacks=callbacks)
     
     # export saved model
     saved_model_path = os.path.join(args.job_dir, "saved_models/{}".format(int(time.time())))  
