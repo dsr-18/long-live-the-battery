@@ -3,11 +3,11 @@ from tensorflow.keras.models import Model
 
 
 def create_keras_model(window_size, loss, optimizer):
-  """Creates the Keras model.
+    """Creates the Keras model.
   
-  Args:
-    window_size: [...]
-  """
+    Args:
+        window_size: [...]
+    """
     steps = 1000
     input_dim = 1
 
