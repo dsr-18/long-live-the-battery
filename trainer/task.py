@@ -8,7 +8,7 @@ import tensorflow as tf
 
 import data_pipeline as dp
 import split_model
-from constants import train_set, test_set, tensorboard_dir, base_dir, saved_model_dir_local
+from constants import train_set, test_set, tensorboard_dir, base_dir, saved_models_dir_local
 
 
 def get_args():
@@ -113,8 +113,8 @@ def train_and_evaluate(args):
     """
 
     # calculate steps_per_epoch_train, steps_per_epoch_test
-    steps_per_epoch_train = calculate_steps_per_epoch(args.data_dir_train)
-    steps_per_epoch_validate = calculate_steps_per_epoch(args.data_dir_validate)
+    steps_per_epoch_train = calculate_steps_per_epoch(args.data_dir_train, args.window_size, args.shift, args.stride, args.batch_size)
+    steps_per_epoch_validate = calculate_steps_per_epoch(args.data_dir_validate, args.window_size, args.shift, args.stride, args.batch_size)
     
     # load datasets
     dataset_train = dp.create_dataset(
@@ -166,13 +166,13 @@ def train_and_evaluate(args):
     
     # export saved model
     if args.saved_model_dir is None:
-        saved_model_dir = os.path.join(saved_model_dir_local, run_timestr)
+        saved_model_dir = os.path.join(saved_models_dir_local, run_timestr)
     else:
         saved_model_dir = args.saved_model_dir
     tf.keras.experimental.export_saved_model(model, saved_model_dir)
 
 
-def calculate_steps_per_epoch(dataset, window_size=args.window_size, shift=args.shift, stride=args.stride, batch_size=args.batch_size):
+def calculate_steps_per_epoch(dataset, window_size, shift, stride, batch_size):
     temp_dataset = dp.create_dataset(
                         data_dir=dataset,
                         window_size=window_size,
