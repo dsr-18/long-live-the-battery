@@ -8,10 +8,11 @@ import tensorflow as tf
 
 import data_pipeline as dp
 import split_model
+from constants import train_set, tensorboard_dir, trained_model_dir
 
-TRAINED_MODEL_DIR_LOCAL = './'
-TFRECORDS_DIR_LOCAL = 'data/tfrecords/train/*tfrecord'
-TB_LOG_DIR_LOCAL = os.path.join('Graph', datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+TRAINED_MODEL_DIR_LOCAL = trained_model_dir
+TFRECORDS_DIR_LOCAL = train_set
+TB_LOG_DIR_LOCAL = os.path.join(tensorboard_dir, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
 
 def get_args():
@@ -106,7 +107,6 @@ def train_and_evaluate(args):
     Args:
     args: dictionary of arguments - see get_args() for details
     """
-    # calculate steps_per_epoch - This throws an error while running locally
     temp_dataset = dp.create_dataset(
                         data_dir=args.tfrecords_dir,
                         window_size=args.window_size,
