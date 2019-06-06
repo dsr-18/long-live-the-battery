@@ -8,11 +8,11 @@ import tensorflow as tf
 
 import data_pipeline as dp
 import split_model
-from constants import train_set, tensorboard_dir, trained_model_dir
 
-TRAINED_MODEL_DIR_LOCAL = trained_model_dir
-TFRECORDS_DIR_LOCAL = train_set
-TB_LOG_DIR_LOCAL = os.path.join(tensorboard_dir, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+import constants as cst
+
+
+TB_LOG_DIR_LOCAL = os.path.join(cst.TENSORBOARD_DIR, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
 
 def get_args():
@@ -25,12 +25,12 @@ def get_args():
     parser.add_argument(
         '--job-dir',
         type=str,
-        default=TRAINED_MODEL_DIR_LOCAL,
+        default=cst.TRAINED_MODEL_DIR,
         help='local or GCS location for writing checkpoints and exporting models')
     parser.add_argument(
         '--tfrecords-dir',
         type=str,
-        default=TFRECORDS_DIR_LOCAL,
+        default=cst.TRAIN_SET,
         help='local or GCS location for reading TFRecord files')
     parser.add_argument(
         '--tboard-dir',
