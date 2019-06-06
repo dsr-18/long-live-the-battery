@@ -20,7 +20,7 @@ def print_dict_keys(print_dict, a=0, ident=2, max_depth=100):
             print_dict_keys(value, a+ident, max_depth=max_depth)
             
 
-def simple_plotly(x, **kwargs):
+def simple_plotly(x, **kwargs, inline=False):
     """Plots a simple plotly plot for all keyword arguments over x.
     Keayword arguments are used for naming the different traces."""
     
@@ -37,7 +37,11 @@ def simple_plotly(x, **kwargs):
     
     fig = go.Figure(traces)
     fig['layout'].update(height=1000, width=1000)
-    pyo.plot(fig)
+    
+    if inline:
+        pyo.ploti(fig)
+    else:
+        pyo.plot(fig)
     
 
 def debug_plot(Qd, T, V, t):
@@ -49,7 +53,7 @@ def debug_plot(Qd, T, V, t):
     simple_plotly(T, V=V)
     
 
-def plot_cycle_results(cycle_results_dict, inline=True):
+def plot_cycle_results(cycle_results_dict, inline=False):
     """Plots comparison curves with plotly for a results dict of one cycle.
     When the original data is not included, only the resampled data is shown.
         
