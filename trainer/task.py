@@ -12,7 +12,6 @@ import split_model
 import constants as cst
 
 
-
 def get_args():
     """Argument parser.
 
@@ -115,8 +114,8 @@ def train_and_evaluate(args):
     """
 
     # calculate steps_per_epoch_train, steps_per_epoch_test
-    steps_per_epoch_train = calculate_steps_per_epoch(args.data_dir_train)
-    steps_per_epoch_validate = calculate_steps_per_epoch(args.data_dir_validate)
+    steps_per_epoch_train = calculate_steps_per_epoch(args.data_dir_train, args.window_size, args.shift, args.stride, args.batch_size)
+    steps_per_epoch_validate = calculate_steps_per_epoch(args.data_dir_validate, args.window_size, args.shift, args.stride, args.batch_size)
     
     # load datasets
     dataset_train = dp.create_dataset(
@@ -174,7 +173,7 @@ def train_and_evaluate(args):
     tf.keras.experimental.export_saved_model(model, saved_model_dir)
 
 
-def calculate_steps_per_epoch(dataset, window_size=args.window_size, shift=args.shift, stride=args.stride, batch_size=args.batch_size):
+def calculate_steps_per_epoch(dataset, window_size, shift, stride, batch_size):
     temp_dataset = dp.create_dataset(
                         data_dir=dataset,
                         window_size=window_size,
