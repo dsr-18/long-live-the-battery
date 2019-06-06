@@ -2,16 +2,16 @@ import argparse
 import os
 from absl import logging
 import time
+import datetime
 
 import tensorflow as tf
-from tensorflow.keras.callbacks import TensorBoard
 
 import data_pipeline as dp
 import split_model
 
 TRAINED_MODEL_DIR_LOCAL = './'
 TFRECORDS_DIR_LOCAL = 'data/tfrecords/train/*tfrecord'
-TB_LOG_DIR_LOCAL = 'Graph'
+TB_LOG_DIR_LOCAL = os.path.join('Graph', datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
 
 def get_args():
@@ -107,17 +107,17 @@ def train_and_evaluate(args):
     args: dictionary of arguments - see get_args() for details
     """
     # calculate steps_per_epoch - This throws an error while running locally
-    # temp_dataset = dp.create_dataset(
-    #                     data_dir=args.tfrecords_dir,
-    #                     window_size=args.window_size,
-    #                     shift=args.shift,
-    #                     stride=args.stride,
-    #                     batch_size=args.batch_size,
-    #                     repeat=False)
-    # steps_per_epoch = 0
-    # for batch in temp_dataset:
-    #     steps_per_epoch += 1
-    steps_per_epoch = 2000
+    temp_dataset = dp.create_dataset(
+                        data_dir=args.tfrecords_dir,
+                        window_size=args.window_size,
+                        shift=args.shift,
+                        stride=args.stride,
+                        batch_size=args.batch_size,
+                        repeat=False)
+    steps_per_epoch = 0
+    for batch in temp_dataset:
+        steps_per_epoch += 1
+    # steps_per_epoch = 2000
     
     # load dataset
     dataset = dp.create_dataset(
@@ -137,7 +137,7 @@ def train_and_evaluate(args):
                                        write_graph=True,
                                        histogram_freq=0,
                                        write_images=True),
-        # More callbacks for testing
+        # More callbacks for testing later
         # tf.keras.callbacks.CSVLogger(os.path.join(args.tboard_dir, 'log.csv')),
         # tf.keras.callbacks.ModelCheckpoint(os.path.join(args.tboard_dir, 'checkpoint_{epoch:02d}.h5'),
         #                                    period=5,
