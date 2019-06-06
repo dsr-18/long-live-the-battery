@@ -116,17 +116,9 @@ def train_and_evaluate(args):
     args: dictionary of arguments - see get_args() for details
     """
 
-    # calculate steps_per_epoch
-    temp_dataset = dp.create_dataset(
-                        data_dir=args.data_dir_train,
-                        window_size=args.window_size,
-                        shift=args.shift,
-                        stride=args.stride,
-                        batch_size=args.batch_size,
-                        repeat=False)
-    steps_per_epoch = 0
-    for batch in temp_dataset:
-        steps_per_epoch += 1
+    # calculate steps_per_epoch_train, steps_per_epoch_test
+    steps_per_epoch_train = calculate_steps_per_epoch(args.data_dir_train)
+    steps_per_epoch_validate = calculate_steps_per_epoch(args.data_dir_validate)
     
     # load datasets
     dataset_train = dp.create_dataset(
@@ -170,9 +162,9 @@ def train_and_evaluate(args):
     model.fit(
         dataset_train, 
         epochs=args.num_epochs,
-        steps_per_epoch=steps_per_epoch,
+        steps_per_epoch=steps_per_epoch_train,
         validation_data=dataset_validate,
-        validation_steps=steps_per_epoch,
+        validation_steps=steps_per_epoch_validate,
         verbose=1,
         callbacks=callbacks)
     
@@ -182,6 +174,20 @@ def train_and_evaluate(args):
     else:
         saved_model_dir = args.saved_model_dir
     tf.keras.experimental.export_saved_model(model, saved_model_dir)
+
+
+def calculate_steps_per_epoch(dataset, window_size=args.window_size, shift=args.shift, stride=args.stride, batch_size=args.batch_size):
+    temp_dataset = dp.create_dataset(
+                        data_dir=dataset,
+                        window_size=window_size,
+                        shift=shift,
+                        stride=stride,
+                        batch_size=batch_size,
+                        repeat=False)
+    steps_per_epoch = 0
+    for batch in temp_dataset:
+        steps_per_epoch += 1
+    return steps_per_epoch
 
 
 if __name__ == '__main__':
