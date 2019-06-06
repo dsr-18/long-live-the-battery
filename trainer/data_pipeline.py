@@ -192,6 +192,20 @@ def get_prep_flatten_windows(window_size):
     return prep_flatten_windows
 
 
+def normalize_window(window_data, window_target):
+    # Find max and min of Tdlin for the whole batch.
+    # Normalize Tdlin values for one window: (data - min) / (max - min).
+    window_data["Tdlin"] = tf.math.divide(tf.math.subtract(window_data["Tdlin"],
+                                                           tf.math.reduce_min(window_data["Tdlin"])),
+                                          tf.math.subtract(tf.math.reduce_max(window_data["Tdlin"]),
+                                                           tf.math.reduce_min(window_data["Tdlin"])))
+    window_data["Qdlin"] = tf.math.divide(tf.math.subtract(window_data["Qdlin"],
+                                                           tf.math.reduce_min(window_data["Qdlin"])),
+                                          tf.math.subtract(tf.math.reduce_max(window_data["Qdlin"]),
+                                                           tf.math.reduce_min(window_data["Qdlin"])))
+    return window_data, window_target
+
+
 def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_remainder, batch_size,
                                            preprocessed=True):
     def create_cell_dataset_from_tfrecords(file):
@@ -207,6 +221,7 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
             dataset = dataset.map(parse_preprocessed_features)
             dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=drop_remainder)
             dataset = dataset.flat_map(get_prep_flatten_windows(window_size))
+            dataset = dataset.map(normalize_window)
         else:
             dataset = tf.data.TFRecordDataset(file).skip(1)
             dataset = dataset.map(parse_features)
