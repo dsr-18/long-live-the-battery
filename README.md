@@ -9,9 +9,9 @@ pip install -r requirements_pip.txt
 ```
 
 ## Run
-To run the model locally, use the following command:
+To run the model locally, use the following command from the base directory:
 ```
-python trainer/task.py
+python -m trainer.task
 ```
 
 To run the model in Google Cloud Platform (Team Members Only):

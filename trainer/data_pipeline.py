@@ -4,7 +4,7 @@ import os
 import tensorflow as tf
 from tensorflow.train import FloatList, Int64List, Feature, Features, Example
 
-import constants as cst
+import trainer.constants as cst
 
 
 def get_cycle_example(cell_value, summary_idx, cycle_idx):

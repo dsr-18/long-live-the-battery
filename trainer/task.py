@@ -6,10 +6,9 @@ import datetime
 
 import tensorflow as tf
 
-import data_pipeline as dp
-import split_model
-
-import constants as cst
+import trainer.data_pipeline as dp
+import trainer.split_model as split_model
+import trainer.constants as cst
 
 
 def get_args():

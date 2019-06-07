@@ -1,4 +1,4 @@
-import constants as cst
+import trainer.constants as cst
 
 from tensorflow.keras.layers import concatenate, LSTM, Conv1D, Flatten, TimeDistributed, Input, Dense
 from tensorflow.keras.models import Model

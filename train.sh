@@ -29,6 +29,8 @@ gcloud ai-platform jobs submit training $JOB_NAME \
     --package-path $PACKAGE_PATH \
     --module-name $MODULE_NAME \
     --region $REGION \
+    --python-version 3.5 \
+    --runtime-version 1.13 \
     --config $CONFIG_FILE \
     --stream-logs \
     -- \
