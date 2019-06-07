@@ -166,7 +166,7 @@ def train_and_evaluate(args):
     
     # export saved model
     if args.saved_model_dir is None:
-        saved_model_dir = os.path.join(cst.SAVED_MODEL_DIR_LOCAL, run_timestr)
+        saved_model_dir = os.path.join(cst.SAVED_MODELS_DIR_LOCAL, run_timestr)
     else:
         saved_model_dir = args.saved_model_dir
     tf.keras.experimental.export_saved_model(model, saved_model_dir)
