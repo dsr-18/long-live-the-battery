@@ -6,9 +6,11 @@ INPUT_DIM = 1  # dimensions of detail level features, e.g. Qdlin and Tdlin
 
 # Feature names - use these for matching features in dataset with model inputs
 INTERNAL_RESISTANCE_NAME = 'IR'
+QD_NAME = 'QD'
 DISCHARGE_TIME_NAME = 'Discharge_time'
 TDLIN_NAME = 'Tdlin'
 QDLIN_NAME = 'Qdlin'
+VDLIN_NAME = 'Vdlin'
 REMAINING_CYCLES_NAME = 'Remaining_cycles'
 
 # File paths
