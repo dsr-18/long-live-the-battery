@@ -15,25 +15,27 @@ JOB_NAME="ion_age_$now"
 
 # user-specified args
 
-TFRECORDS_DIR="gs://${BUCKET}/data/tfrecords/train/*tfrecord"
+TFRECORDS_DIR_TRAIN="gs://${BUCKET}/data/tfrecords/train/*tfrecord"
+TFRECORDS_DIR_VALIDATE="gs://${BUCKET}/data/tfrecords/test/*tfrecord"
 
-# trying to put TensorBoard logs in individual run dirs
-TBOARD_LOGS_DIR="${PACKAGE_STAGING_PATH}/${JOB_NAME}"
+# put TensorBoard logs, saved models in individual run dirs
+JOB_RUN_DIR="${PACKAGE_STAGING_PATH}/${JOB_NAME}"
+SAVED_MODEL_DIR="${JOB_RUN_DIR}/saved_model"
 
-
+# user-defined args go after the open '--'
 gcloud ai-platform jobs submit training $JOB_NAME \
     --job-dir $JOB_DIR  \
     --staging-bucket $PACKAGE_STAGING_PATH \
     --package-path $PACKAGE_PATH \
     --module-name $MODULE_NAME \
     --region $REGION \
+    --python-version 3.5 \
+    --runtime-version 1.13 \
     --config $CONFIG_FILE \
     --stream-logs \
     -- \
-    --tfrecords-dir $TFRECORDS_DIR \
-    --tboard-dir $TBOARD_LOGS_DIR \
-
-    # user-defined args go after the open '--'
-
-    # TODO add validation set
+    --data-dir-train $TFRECORDS_DIR_TRAIN \
+    --data-dir-validate $TFRECORDS_DIR_VALIDATE \
+    --tboard-dir $JOB_RUN_DIR \
+    --saved-model-dir $SAVED_MODEL_DIR
 
