@@ -12,6 +12,9 @@ TDLIN_NAME = 'Tdlin'
 QDLIN_NAME = 'Qdlin'
 VDLIN_NAME = 'Vdlin'
 REMAINING_CYCLES_NAME = 'Remaining_cycles'
+REMAINING_CYCLES_SCALED_NAME = 'Remaining_cycles_scaled'
+
+REMAINING_CYCLES_SCALE_FACTOR = 3000
 
 # File paths
 TRAIN_TEST_SPLIT = "train_test_split.pkl"  # file location for train/test split definition
