@@ -437,8 +437,13 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
     cycles_drop_info = dict()
     
     print("Start processing data ...")
-    for cell_key, cell_value in batch_dict.items():
-        
+    
+    for cell_key in list(batch_dict.keys()):
+        # The iteration is over a list of keys so the processed keys can be removed while iterating over the dict.
+        # This reduces the memory used during processing.
+        # If "for cell_key, cell_value in batch_dict.items()" is used,
+            # "del batch_dict[cell_key]" would throw an RuntimeError: dictionary changed size during iteration.
+        cell_value = batch_dict[cell_key]
         # Initialite the cell results with all available scalar values.
         batch_results[cell_key] = dict(
             cycle_life=cell_value["cycle_life"][0][0],
@@ -512,6 +517,8 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
         
         if verbose:
             print(cell_key, "done")
+        # Delete cell key from dict, to reduce used memory during processing.
+        del batch_dict[cell_key]
     
     
     cycles_drop_info["number_distinct_cells"] = len(cycles_drop_info)
@@ -588,7 +595,7 @@ def main():
                                                  verbose=True)
     
     pprint(cycles_drop_info)
-    describe_results_dict(results)
+    # describe_results_dict(results)
     
     save_preprocessed_data(results)
     print("Done!")
