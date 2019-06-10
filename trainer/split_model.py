@@ -15,7 +15,8 @@ def create_keras_model(window_size, loss, optimizer):
     tdlin_in = Input(shape=(window_size, cst.STEPS, cst.INPUT_DIM), name=cst.TDLIN_NAME)
     ir_in = Input(shape=(window_size, cst.INPUT_DIM), name=cst.INTERNAL_RESISTANCE_NAME)
     dt_in = Input(shape=(window_size, cst.INPUT_DIM), name=cst.DISCHARGE_TIME_NAME)
-
+    qd_in = Input(shape=(window_size, cst.INPUT_DIM), name=cst.QD_NAME)
+    
     # combine all data from detail level
     detail_concat = concatenate([qdlin_in, tdlin_in], axis=3, name='detail_concat')
 
@@ -28,13 +29,13 @@ def create_keras_model(window_size, loss, optimizer):
     cnn_flat = TimeDistributed(Flatten(), name='convolution_flat')(cnn_maxpool2)
 
     # combine CNN output with all data from summary level
-    all_concat = concatenate([cnn_flat, ir_in, dt_in], axis=2, name='all_concat')
+    all_concat = concatenate([cnn_flat, ir_in, dt_in, qd_in], axis=2, name='all_concat')
 
     # define LSTM
     lstm_out = LSTM(20, activation='relu', name='recurrent')(all_concat)
     main_output = Dense(1, name='output')(lstm_out)
 
-    model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in], outputs=[main_output])
+    model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])
     model.compile(loss=loss, optimizer=optimizer)
 
     return model

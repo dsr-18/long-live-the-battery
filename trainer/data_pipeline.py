@@ -204,6 +204,7 @@ def normalize_window(window_data, window_target):
     window_data[cst.TDLIN_NAME] = normalize_feature(cst.TDLIN_NAME, window_data)
     window_data[cst.QDLIN_NAME] = normalize_feature(cst.QDLIN_NAME, window_data)
     window_data[cst.INTERNAL_RESISTANCE_NAME] = normalize_feature(cst.INTERNAL_RESISTANCE_NAME, window_data)
+    window_data[cst.DISCHARGE_TIME_NAME] = normalize_feature(cst.DISCHARGE_TIME_NAME, window_data)
     return window_data, window_target
 
 
