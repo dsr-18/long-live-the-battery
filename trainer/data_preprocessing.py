@@ -612,4 +612,5 @@ if __name__ == "__main__":
 
 
 # TODO: Check with new threshold after processing outliers of std >= 12
+# TODO: Scaling QD by the value in the product descr
 # TODO: Notebook update
