@@ -133,12 +133,12 @@ def parse_preprocessed_features(example_proto):
         cst.INTERNAL_RESISTANCE_NAME: tf.io.FixedLenFeature([1, ], tf.float32),
         cst.QD_NAME: tf.io.FixedLenFeature([1, ], tf.float32),
         cst.DISCHARGE_TIME_NAME: tf.io.FixedLenFeature([1, ], tf.float32),
-        cst.REMAINING_CYCLES_SCALED_NAME: tf.io.FixedLenFeature([], tf.float32),
+        cst.REMAINING_CYCLES_NAME: tf.io.FixedLenFeature([], tf.float32),
         cst.TDLIN_NAME: tf.io.FixedLenFeature([cst.STEPS, cst.INPUT_DIM], tf.float32),
         cst.QDLIN_NAME: tf.io.FixedLenFeature([cst.STEPS, cst.INPUT_DIM], tf.float32)
     }
     examples = tf.io.parse_single_example(example_proto, feature_description)
-    targets = examples.pop(cst.REMAINING_CYCLES_SCALED_NAME)
+    targets = examples.pop(cst.REMAINING_CYCLES_NAME)
     return examples, targets
 
 
