@@ -451,7 +451,6 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
                 cst.INTERNAL_RESISTANCE_NAME: [],
                 cst.QD_NAME: [],
                 cst.REMAINING_CYCLES_NAME: [],
-                cst.REMAINING_CYCLES_SCALED_NAME: [],
                 cst.DISCHARGE_TIME_NAME: []
             },
             cycles=dict()
@@ -516,10 +515,6 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
         for k, v in batch_results[cell_key]["summary"].items():
             batch_results[cell_key]["summary"][k] = np.array(v)
         
-        # Scale and save remaining cycles.
-        batch_results[cell_key]["summary"][cst.REMAINING_CYCLES_SCALED_NAME] = \
-            batch_results[cell_key]["summary"][cst.REMAINING_CYCLES_NAME] / cst.REMAINING_CYCLES_SCALE_FACTOR
-        
         if verbose:
             print(cell_key, "done")
         # Delete cell key from dict, to reduce used memory during processing.
@@ -558,7 +553,6 @@ def describe_results_dict(results_dict):
     for k in [cst.INTERNAL_RESISTANCE_NAME,
               cst.QD_NAME,
               cst.REMAINING_CYCLES_NAME,
-              cst.REMAINING_CYCLES_SCALED_NAME,
               cst.DISCHARGE_TIME_NAME]:
         summary_results[k] = dict(
             max = np.max([np.max(cell["summary"][k]) for cell in results_dict.values()]),
@@ -612,4 +606,5 @@ if __name__ == "__main__":
 
 
 # TODO: Check with new threshold after processing outliers of std >= 12
+# TODO: Scaling QD by the value in the product descr
 # TODO: Notebook update

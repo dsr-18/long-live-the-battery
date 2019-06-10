@@ -12,9 +12,9 @@ TDLIN_NAME = 'Tdlin'
 QDLIN_NAME = 'Qdlin'
 VDLIN_NAME = 'Vdlin'
 REMAINING_CYCLES_NAME = 'Remaining_cycles'
-REMAINING_CYCLES_SCALED_NAME = 'Remaining_cycles_scaled'
 
 REMAINING_CYCLES_SCALE_FACTOR = 3000  # Arbitrary number for division of Remaining_cycles, just to make it explicit.
+QD_SCALE_FACTOR = 1.1  # Capacity taken from product description of a standard lithium-ion battery
 
 # File paths
 TRAIN_TEST_SPLIT = "train_test_split.pkl"  # file location for train/test split definition
