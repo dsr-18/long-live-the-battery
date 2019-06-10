@@ -20,3 +20,6 @@ Graph/
 
 # local saved models
 saved_models/
+
+# virtual environments
+env/

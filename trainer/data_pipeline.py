@@ -34,7 +34,7 @@ def get_preprocessed_cycle_example(cell_value, summary_idx, cycle_idx):
             feature={
                 cst.INTERNAL_RESISTANCE_NAME:
                     Feature(float_list=FloatList(value=[cell_value["summary"][cst.INTERNAL_RESISTANCE_NAME][summary_idx]])),
-                cst.REMAINING_CYCLES_NAME:
+                cst.REMAINING_CYCLES_SCALED_NAME:
                     Feature(float_list=FloatList(value=[cell_value["summary"][cst.REMAINING_CYCLES_SCALED_NAME][summary_idx]])),
                 cst.DISCHARGE_TIME_NAME:
                     Feature(float_list=FloatList(value=[cell_value["summary"][cst.DISCHARGE_TIME_NAME][summary_idx]])),
@@ -130,12 +130,12 @@ def parse_preprocessed_features(example_proto):
     feature_description = {
         cst.INTERNAL_RESISTANCE_NAME: tf.io.FixedLenFeature([1, ], tf.float32),
         cst.DISCHARGE_TIME_NAME: tf.io.FixedLenFeature([1, ], tf.float32),
-        cst.REMAINING_CYCLES_NAME: tf.io.FixedLenFeature([], tf.float32),
+        cst.REMAINING_CYCLES_SCALED_NAME: tf.io.FixedLenFeature([], tf.float32),
         cst.TDLIN_NAME: tf.io.FixedLenFeature([cst.STEPS, cst.INPUT_DIM], tf.float32),
         cst.QDLIN_NAME: tf.io.FixedLenFeature([cst.STEPS, cst.INPUT_DIM], tf.float32)
     }
     examples = tf.io.parse_single_example(example_proto, feature_description)
-    targets = examples.pop(cst.REMAINING_CYCLES_NAME)
+    targets = examples.pop(cst.REMAINING_CYCLES_SCALED_NAME)
     return examples, targets
 
 
@@ -191,17 +191,19 @@ def get_prep_flatten_windows(window_size):
     return prep_flatten_windows
 
 
+def normalize_feature(feature_name, window_data):
+    return tf.math.divide(tf.math.subtract(window_data[feature_name],
+                                           tf.math.reduce_min(window_data[feature_name])),
+                          tf.math.subtract(tf.math.reduce_max(window_data[feature_name]),
+                                           tf.math.reduce_min(window_data[feature_name])))
+    
+    
 def normalize_window(window_data, window_target):
     # Find max and min of Tdlin for the whole batch.
     # Normalize Tdlin values for one window: (data - min) / (max - min).
-    window_data[cst.TDLIN_NAME] = tf.math.divide(tf.math.subtract(window_data[cst.TDLIN_NAME],
-                                                                  tf.math.reduce_min(window_data[cst.TDLIN_NAME])),
-                                                 tf.math.subtract(tf.math.reduce_max(window_data[cst.TDLIN_NAME]),
-                                                                  tf.math.reduce_min(window_data[cst.TDLIN_NAME])))
-    window_data[cst.QDLIN_NAME] = tf.math.divide(tf.math.subtract(window_data[cst.QDLIN_NAME],
-                                                                  tf.math.reduce_min(window_data[cst.QDLIN_NAME])),
-                                                 tf.math.subtract(tf.math.reduce_max(window_data[cst.QDLIN_NAME]),
-                                                                  tf.math.reduce_min(window_data[cst.QDLIN_NAME])))
+    window_data[cst.TDLIN_NAME] = normalize_feature(cst.TDLIN_NAME, window_data)
+    window_data[cst.QDLIN_NAME] = normalize_feature(cst.QDLIN_NAME, window_data)
+    window_data[cst.INTERNAL_RESISTANCE_NAME] = normalize_feature(cst.INTERNAL_RESISTANCE_NAME, window_data)
     return window_data, window_target
 
 
