@@ -6,10 +6,15 @@ INPUT_DIM = 1  # dimensions of detail level features, e.g. Qdlin and Tdlin
 
 # Feature names - use these for matching features in dataset with model inputs
 INTERNAL_RESISTANCE_NAME = 'IR'
+QD_NAME = 'QD'
 DISCHARGE_TIME_NAME = 'Discharge_time'
 TDLIN_NAME = 'Tdlin'
 QDLIN_NAME = 'Qdlin'
+VDLIN_NAME = 'Vdlin'
 REMAINING_CYCLES_NAME = 'Remaining_cycles'
+REMAINING_CYCLES_SCALED_NAME = 'Remaining_cycles_scaled'
+
+REMAINING_CYCLES_SCALE_FACTOR = 3000  # Arbitrary number for division of Remaining_cycles, just to make it explicit.
 
 # File paths
 TRAIN_TEST_SPLIT = "train_test_split.pkl"  # file location for train/test split definition

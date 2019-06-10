@@ -33,15 +33,15 @@ def get_preprocessed_cycle_example(cell_value, summary_idx, cycle_idx):
         features=Features(
             feature={
                 cst.INTERNAL_RESISTANCE_NAME:
-                    Feature(float_list=FloatList(value=[cell_value["summary"]["IR"][summary_idx]])),
+                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.INTERNAL_RESISTANCE_NAME][summary_idx]])),
                 cst.REMAINING_CYCLES_NAME:
-                    Feature(float_list=FloatList(value=[cell_value["summary"]["remaining_cycle_life"][summary_idx]])),
+                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.REMAINING_CYCLES_SCALED_NAME][summary_idx]])),
                 cst.DISCHARGE_TIME_NAME:
-                    Feature(float_list=FloatList(value=[cell_value["summary"]["high_current_discharging_time"][summary_idx]])),
+                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.DISCHARGE_TIME_NAME][summary_idx]])),
                 cst.QDLIN_NAME:
-                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["Qd_resample"])),
+                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx][cst.QDLIN_NAME])),
                 cst.TDLIN_NAME:
-                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["T_resample"]))
+                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx][cst.TDLIN_NAME]))
             }
         )
     )
@@ -191,6 +191,20 @@ def get_prep_flatten_windows(window_size):
     return prep_flatten_windows
 
 
+def normalize_window(window_data, window_target):
+    # Find max and min of Tdlin for the whole batch.
+    # Normalize Tdlin values for one window: (data - min) / (max - min).
+    window_data[cst.TDLIN_NAME] = tf.math.divide(tf.math.subtract(window_data[cst.TDLIN_NAME],
+                                                                  tf.math.reduce_min(window_data[cst.TDLIN_NAME])),
+                                                 tf.math.subtract(tf.math.reduce_max(window_data[cst.TDLIN_NAME]),
+                                                                  tf.math.reduce_min(window_data[cst.TDLIN_NAME])))
+    window_data[cst.QDLIN_NAME] = tf.math.divide(tf.math.subtract(window_data[cst.QDLIN_NAME],
+                                                                  tf.math.reduce_min(window_data[cst.QDLIN_NAME])),
+                                                 tf.math.subtract(tf.math.reduce_max(window_data[cst.QDLIN_NAME]),
+                                                                  tf.math.reduce_min(window_data[cst.QDLIN_NAME])))
+    return window_data, window_target
+
+
 def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_remainder, batch_size,
                                            preprocessed=True):
     def create_cell_dataset_from_tfrecords(file):
@@ -206,6 +220,7 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
             dataset = dataset.map(parse_preprocessed_features)
             dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=drop_remainder)
             dataset = dataset.flat_map(get_prep_flatten_windows(window_size))
+            dataset = dataset.map(normalize_window)
         else:
             dataset = tf.data.TFRecordDataset(file).skip(1)
             dataset = dataset.map(parse_features)

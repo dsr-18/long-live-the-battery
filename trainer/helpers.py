@@ -39,7 +39,7 @@ def simple_plotly(x, inline=False, **kwargs):
     fig['layout'].update(height=1000, width=1000)
     
     if inline:
-        pyo.ploti(fig)
+        pyo.iplot(fig)
     else:
         pyo.plot(fig)
     

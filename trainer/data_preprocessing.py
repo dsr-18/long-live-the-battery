@@ -7,9 +7,9 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import savgol_filter
 
-from rebuilding_features import load_batches_to_dict
+from trainer.rebuilding_features import load_batches_to_dict
+import trainer.constants as cst
 
-SAVE_DIR = join("data", "processed_data.pkl")
 
 class DropCycleException(Exception):
     """Used for dropping whole cycles without additional information."""
@@ -305,22 +305,22 @@ def make_strictly_decreasing(x_interp, y_interp, prepend_value=3.7):
 def preprocess_cycle(
     cycle,
     I_thresh=-3.99, 
-    V_resample_start=3.5, 
-    V_resample_stop=2.0, 
-    V_resample_steps=1000,
+    Vdlin_start=3.5, 
+    Vdlin_stop=2.0, 
+    Vdlin_steps=1000,
     return_original_data=False
     ):
     """Processes data (Qd, T, V, t) from one cycle and resamples Qd, T and V to a predefinded dimension.
-    high_current_discharging_time will be computed based on t and is the only returned feature that is a scalar.
+    discharging_time will be computed based on t and is the only returned feature that is a scalar.
     
     Arguments:
         cycle {dict} -- One cycle entry from the original data with keys 'I', 'Qd', 'T', 'V', 't'
     
     Keyword Arguments:
         I_thresh {float} -- Only measurements where the current is smaller than this threshold are chosen (default: {-3.99})
-        V_resample_start {float} -- Start value for the resampled V (default: {3.5})
-        V_resample_stop {float} -- Stop value for the resampled V (default: {2.0})
-        V_resample_steps {int} -- Number of steps V, Qd and T are resampled (default: {1000})
+        Vdlin_start {float} -- Start value for the resampled V (default: {3.5})
+        Vdlin_stop {float} -- Stop value for the resampled V (default: {2.0})
+        Vdlin_steps {int} -- Number of steps V, Qd and T are resampled (default: {1000})
         return_original_data {bool} -- Weather the original datapoints, which were used for interpolation,
             shold be returned in the results  (default: {False})
     
@@ -335,8 +335,8 @@ def preprocess_cycle(
     t = cycle["t"]
     
     ## Only take the measurements during high current discharging.
-    high_current_discharge_mask = I < I_thresh
-    Qd, T, V, t = multiple_array_indexing(high_current_discharge_mask, Qd, T, V, t)
+    discharge_mask = I < I_thresh
+    Qd, T, V, t = multiple_array_indexing(discharge_mask, Qd, T, V, t)
     
     ## Sort all values after time.
     sorted_indeces = t.argsort()
@@ -372,11 +372,11 @@ def preprocess_cycle(
     V_strict_dec = make_strictly_decreasing(t, V)
 
     # Calculate discharging time. (Only scalar feature which is returned later)
-    high_current_discharging_time = t.max() - t.min()
-    if high_current_discharging_time < 6:
+    discharging_time = t.max() - t.min()
+    if discharging_time < 6:
         print("Test")
-        raise DropCycleException("Dropping cycle with high_current_discharging_time = {}"\
-                                 .format(high_current_discharging_time))
+        raise DropCycleException("Dropping cycle with discharge_time = {}"\
+                                 .format(discharging_time))
     
     ## Make interpolation function.
     Qd_interp_func = interp1d(
@@ -394,30 +394,30 @@ def preprocess_cycle(
 
     # For resampling the decreasing order is chosen again.
     # The order doesn't matter for evaluating Qd_interp_func.
-    V_resample = np.linspace(V_resample_start, V_resample_stop, V_resample_steps)
+    Vdlin = np.linspace(Vdlin_start, Vdlin_stop, Vdlin_steps)
     
-    Qd_resample = Qd_interp_func(V_resample)
-    T_resample = T_interp_func(V_resample)
+    Qdlin = Qd_interp_func(Vdlin)
+    Tdlin = T_interp_func(Vdlin)
 
     if return_original_data:
-        return dict(
-            Qd_resample=Qd_resample,
-            T_resample=T_resample,
-            V_resample=V_resample,
-            high_current_discharging_time=high_current_discharging_time,
+        return {
+            cst.QDLIN_NAME: Qdlin,
+            cst.TDLIN_NAME: Tdlin,
+            cst.VDLIN_NAME: Vdlin,
+            cst.DISCHARGE_TIME_NAME: discharging_time,
             # Original data used for interpolation.
-            Qd_original_data=Qd,
-            T_original_data=T,
-            V_original_data=V,
-            t_original_data=t
-            )
+            "Qd_original_data": Qd,
+            "T_original_data": T,
+            "V_original_data": V,
+            "t_original_data": t
+        }
     else:
-        return dict(
-            Qd_resample=Qd_resample,
-            T_resample=T_resample,
-            V_resample=V_resample,
-            high_current_discharging_time=high_current_discharging_time
-            )
+        return {
+            cst.QDLIN_NAME: Qdlin,
+            cst.TDLIN_NAME: Tdlin,
+            cst.VDLIN_NAME: Vdlin,
+            cst.DISCHARGE_TIME_NAME: discharging_time
+        }
 
 
 def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_info=False, verbose=False):
@@ -437,17 +437,23 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
     cycles_drop_info = dict()
     
     print("Start processing data ...")
-    for cell_key, cell_value in batch_dict.items():
-        
+    
+    for cell_key in list(batch_dict.keys()):
+        # The iteration is over a list of keys so the processed keys can be removed while iterating over the dict.
+        # This reduces the memory used during processing.
+        # If "for cell_key, cell_value in batch_dict.items()" is used,
+            # "del batch_dict[cell_key]" would throw an RuntimeError: dictionary changed size during iteration.
+        cell_value = batch_dict[cell_key]
         # Initialite the cell results with all available scalar values.
         batch_results[cell_key] = dict(
             cycle_life=cell_value["cycle_life"][0][0],
-            summary=dict(
-                IR = [],
-                QD = [],
-                remaining_cycle_life = [],
-                high_current_discharging_time = []
-                ),
+            summary={
+                cst.INTERNAL_RESISTANCE_NAME: [],
+                cst.QD_NAME: [],
+                cst.REMAINING_CYCLES_NAME: [],
+                cst.REMAINING_CYCLES_SCALED_NAME: [],
+                cst.DISCHARGE_TIME_NAME: []
+            },
             cycles=dict()
             )
         
@@ -491,14 +497,17 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
             
             # Copy summary values for this cycle into the results. 
             # I tried writing it into an initialized array, but then indeces of dropped cycles get skipped. 
-            batch_results[cell_key]["summary"]["IR"].append(cell_value["summary"]["IR"][int(cycle_key)])
-            batch_results[cell_key]["summary"]["QD"].append(cell_value["summary"]["QD"][int(cycle_key)])
-            batch_results[cell_key]["summary"]["remaining_cycle_life"].append(cell_value["cycle_life"][0][0] - int(cycle_key))
+            batch_results[cell_key]["summary"][cst.INTERNAL_RESISTANCE_NAME].append(
+                cell_value["summary"][cst.INTERNAL_RESISTANCE_NAME][int(cycle_key)])
+            batch_results[cell_key]["summary"][cst.QD_NAME].append(
+                cell_value["summary"][cst.QD_NAME][int(cycle_key)])
+            batch_results[cell_key]["summary"][cst.REMAINING_CYCLES_NAME].append(
+                cell_value["cycle_life"][0][0] - int(cycle_key))
             
             # Append the calculated discharge time.
             # This is the only scalar results from preprocess_cycle
-            batch_results[cell_key]["summary"]["high_current_discharging_time"].append(
-                cycle_results.pop("high_current_discharging_time"))
+            batch_results[cell_key]["summary"][cst.DISCHARGE_TIME_NAME].append(
+                cycle_results.pop(cst.DISCHARGE_TIME_NAME))
             
             # Write the results to the correct cycle key.
             batch_results[cell_key]["cycles"][cycle_key] = cycle_results
@@ -507,8 +516,14 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
         for k, v in batch_results[cell_key]["summary"].items():
             batch_results[cell_key]["summary"][k] = np.array(v)
         
+        # Scale and save remaining cycles.
+        batch_results[cell_key]["summary"][cst.REMAINING_CYCLES_SCALED_NAME] = \
+            batch_results[cell_key]["summary"][cst.REMAINING_CYCLES_NAME] / cst.REMAINING_CYCLES_SCALE_FACTOR
+        
         if verbose:
             print(cell_key, "done")
+        # Delete cell key from dict, to reduce used memory during processing.
+        del batch_dict[cell_key]
     
     
     cycles_drop_info["number_distinct_cells"] = len(cycles_drop_info)
@@ -540,7 +555,11 @@ def describe_results_dict(results_dict):
     ))
 
     summary_results = dict()
-    for k in ["IR", "QD", "remaining_cycle_life", "high_current_discharging_time"]:
+    for k in [cst.INTERNAL_RESISTANCE_NAME,
+              cst.QD_NAME,
+              cst.REMAINING_CYCLES_NAME,
+              cst.REMAINING_CYCLES_SCALED_NAME,
+              cst.DISCHARGE_TIME_NAME]:
         summary_results[k] = dict(
             max = np.max([np.max(cell["summary"][k]) for cell in results_dict.values()]),
             min = np.min([np.min(cell["summary"][k]) for cell in results_dict.values()]),
@@ -550,7 +569,7 @@ def describe_results_dict(results_dict):
     describe_dict.update(dict(summary_results=summary_results))
     
     cycle_results = dict()
-    for k in ["Qd_resample", "T_resample"]:
+    for k in [cst.QDLIN_NAME, cst.TDLIN_NAME]:
         cycle_results[k] = dict(
             max = np.max([np.max(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()]),
             min = np.min([np.min(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()]),
@@ -562,13 +581,13 @@ def describe_results_dict(results_dict):
     pprint(describe_dict)
 
 
-def save_preprocessed_data(results_dict, save_dir=SAVE_DIR):
+def save_preprocessed_data(results_dict, save_dir=cst.PROCESSED_DATA):
     print("Saving preprocessed data to {}".format(save_dir))
     with open(save_dir, 'wb') as f:
         pickle.dump(results_dict, f)
     
 
-def load_preprocessed_data(save_dir=SAVE_DIR):
+def load_preprocessed_data(save_dir=cst.PROCESSED_DATA):
     print("Loading preprocessed data from {}".format(save_dir))
     with open(save_dir, 'rb') as f:
         return pickle.load(f)
@@ -578,12 +597,12 @@ def main():
     batch_dict = load_batches_to_dict(amount_to_load=3)    
 
     results, cycles_drop_info = preprocess_batch(batch_dict,
-                                                 return_original_data=True,
+                                                 return_original_data=False,
                                                  return_cycle_drop_info=True,
                                                  verbose=True)
     
     pprint(cycles_drop_info)
-    describe_results_dict(results)
+    # describe_results_dict(results)
     
     save_preprocessed_data(results)
     print("Done!")
@@ -592,5 +611,5 @@ if __name__ == "__main__":
     main()
 
 
-# TODO: Process all batches before moving on?
 # TODO: Check with new threshold after processing outliers of std >= 12
+# TODO: Notebook update
