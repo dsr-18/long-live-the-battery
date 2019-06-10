@@ -34,8 +34,10 @@ def get_preprocessed_cycle_example(cell_value, summary_idx, cycle_idx):
             feature={
                 cst.INTERNAL_RESISTANCE_NAME:
                     Feature(float_list=FloatList(value=[cell_value["summary"][cst.INTERNAL_RESISTANCE_NAME][summary_idx]])),
-                cst.REMAINING_CYCLES_SCALED_NAME:
-                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.REMAINING_CYCLES_SCALED_NAME][summary_idx]])),
+                cst.QD_NAME:
+                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.QD_NAME][summary_idx]])),
+                cst.REMAINING_CYCLES_NAME:
+                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.REMAINING_CYCLES_NAME][summary_idx]])),
                 cst.DISCHARGE_TIME_NAME:
                     Feature(float_list=FloatList(value=[cell_value["summary"][cst.DISCHARGE_TIME_NAME][summary_idx]])),
                 cst.QDLIN_NAME:
@@ -129,6 +131,7 @@ def parse_preprocessed_features(example_proto):
     """
     feature_description = {
         cst.INTERNAL_RESISTANCE_NAME: tf.io.FixedLenFeature([1, ], tf.float32),
+        cst.QD_NAME: tf.io.FixedLenFeature([1, ], tf.float32),
         cst.DISCHARGE_TIME_NAME: tf.io.FixedLenFeature([1, ], tf.float32),
         cst.REMAINING_CYCLES_SCALED_NAME: tf.io.FixedLenFeature([], tf.float32),
         cst.TDLIN_NAME: tf.io.FixedLenFeature([cst.STEPS, cst.INPUT_DIM], tf.float32),
@@ -176,13 +179,15 @@ def get_prep_flatten_windows(window_size):
         tdlin = features[cst.TDLIN_NAME].batch(window_size)
         ir = features[cst.INTERNAL_RESISTANCE_NAME].batch(window_size)
         dc_time = features[cst.DISCHARGE_TIME_NAME].batch(window_size)
+        qd = features[cst.QD_NAME].batch(window_size)
         # the names in this dict have to match the names of the Input objects in
         # our final model
         features_flat = {
             cst.QDLIN_NAME: qdlin,
             cst.TDLIN_NAME: tdlin,
             cst.INTERNAL_RESISTANCE_NAME: ir,
-            cst.DISCHARGE_TIME_NAME: dc_time
+            cst.DISCHARGE_TIME_NAME: dc_time,
+            cst.QD_NAME: qd
         }
         # For every window we want to have one target/label
         # so we only get the last row by skipping all but one row
@@ -198,13 +203,17 @@ def normalize_feature(feature_name, window_data):
                                            tf.math.reduce_min(window_data[feature_name])))
     
     
-def normalize_window(window_data, window_target):
-    # Find max and min of Tdlin for the whole batch.
-    # Normalize Tdlin values for one window: (data - min) / (max - min).
+def scale_features(window_data, window_target):
+    # Normalize values for one window: (data - min) / (max - min).
     window_data[cst.TDLIN_NAME] = normalize_feature(cst.TDLIN_NAME, window_data)
     window_data[cst.QDLIN_NAME] = normalize_feature(cst.QDLIN_NAME, window_data)
     window_data[cst.INTERNAL_RESISTANCE_NAME] = normalize_feature(cst.INTERNAL_RESISTANCE_NAME, window_data)
     window_data[cst.DISCHARGE_TIME_NAME] = normalize_feature(cst.DISCHARGE_TIME_NAME, window_data)
+    
+    # Scale scalar features.
+    window_data[cst.QD_NAME] = tf.math.divide(window_data[cst.QD_NAME], cst.QD_SCALE_FACTOR)
+    window_target = tf.math.divide(window_target, cst.REMAINING_CYCLES_SCALE_FACTOR)
+    
     return window_data, window_target
 
 
@@ -223,7 +232,7 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
             dataset = dataset.map(parse_preprocessed_features)
             dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=drop_remainder)
             dataset = dataset.flat_map(get_prep_flatten_windows(window_size))
-            dataset = dataset.map(normalize_window)
+            dataset = dataset.map(scale_features)
         else:
             dataset = tf.data.TFRecordDataset(file).skip(1)
             dataset = dataset.map(parse_features)
