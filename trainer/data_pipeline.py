@@ -194,14 +194,14 @@ def get_prep_flatten_windows(window_size):
 def normalize_window(window_data, window_target):
     # Find max and min of Tdlin for the whole batch.
     # Normalize Tdlin values for one window: (data - min) / (max - min).
-    window_data["Tdlin"] = tf.math.divide(tf.math.subtract(window_data["Tdlin"],
-                                                           tf.math.reduce_min(window_data["Tdlin"])),
-                                          tf.math.subtract(tf.math.reduce_max(window_data["Tdlin"]),
-                                                           tf.math.reduce_min(window_data["Tdlin"])))
-    window_data["Qdlin"] = tf.math.divide(tf.math.subtract(window_data["Qdlin"],
-                                                           tf.math.reduce_min(window_data["Qdlin"])),
-                                          tf.math.subtract(tf.math.reduce_max(window_data["Qdlin"]),
-                                                           tf.math.reduce_min(window_data["Qdlin"])))
+    window_data[cst.TDLIN_NAME] = tf.math.divide(tf.math.subtract(window_data[cst.TDLIN_NAME],
+                                                                  tf.math.reduce_min(window_data[cst.TDLIN_NAME])),
+                                                 tf.math.subtract(tf.math.reduce_max(window_data[cst.TDLIN_NAME]),
+                                                                  tf.math.reduce_min(window_data[cst.TDLIN_NAME])))
+    window_data[cst.QDLIN_NAME] = tf.math.divide(tf.math.subtract(window_data[cst.QDLIN_NAME],
+                                                                  tf.math.reduce_min(window_data[cst.QDLIN_NAME])),
+                                                 tf.math.subtract(tf.math.reduce_max(window_data[cst.QDLIN_NAME]),
+                                                                  tf.math.reduce_min(window_data[cst.QDLIN_NAME])))
     return window_data, window_target
 
 
