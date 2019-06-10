@@ -33,15 +33,15 @@ def get_preprocessed_cycle_example(cell_value, summary_idx, cycle_idx):
         features=Features(
             feature={
                 cst.INTERNAL_RESISTANCE_NAME:
-                    Feature(float_list=FloatList(value=[cell_value["summary"]["IR"][summary_idx]])),
+                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.INTERNAL_RESISTANCE_NAME][summary_idx]])),
                 cst.REMAINING_CYCLES_NAME:
-                    Feature(float_list=FloatList(value=[cell_value["summary"]["remaining_cycle_life"][summary_idx]])),
+                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.REMAINING_CYCLES_SCALED_NAME][summary_idx]])),
                 cst.DISCHARGE_TIME_NAME:
-                    Feature(float_list=FloatList(value=[cell_value["summary"]["high_current_discharging_time"][summary_idx]])),
+                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.DISCHARGE_TIME_NAME][summary_idx]])),
                 cst.QDLIN_NAME:
-                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["Qd_resample"])),
+                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx][cst.QDLIN_NAME])),
                 cst.TDLIN_NAME:
-                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx]["T_resample"]))
+                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx][cst.TDLIN_NAME]))
             }
         )
     )
