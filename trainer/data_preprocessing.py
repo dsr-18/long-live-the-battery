@@ -7,8 +7,8 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import savgol_filter
 
-from rebuilding_features import load_batches_to_dict
-import constants as cst
+from trainer.rebuilding_features import load_batches_to_dict
+import trainer.constants as cst
 
 
 class DropCycleException(Exception):
