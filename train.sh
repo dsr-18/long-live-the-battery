@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # standard args
 
 BUCKET='ion_age_bucket'
@@ -22,7 +24,63 @@ TFRECORDS_DIR_VALIDATE="gs://${BUCKET}/data/tfrecords/test/*tfrecord"
 JOB_RUN_DIR="${PACKAGE_STAGING_PATH}/${JOB_NAME}"
 SAVED_MODEL_DIR="${JOB_RUN_DIR}/saved_model"
 
+
+# parse command-line args
+params=()
+while getopts ":hw:e:b:s:t:l:o:v:z" opt; do
+    case $opt in
+        h)
+            printf "Options:\n\t -w window-size\
+                            \n\t -e num-epochs\
+                            \n\t -b batch-size\
+                            \n\t -s shift\
+                            \n\t -t stride\
+                            \n\t -l loss\
+                            \n\t -o optimizer\
+                            \n\t -v verbosity\
+                            \n\t -z shuffle-buffer\n" >&2
+            exit 1
+            ;;
+        w)
+            params+=(--window-size $OPTARG)
+            ;;
+        e)
+            params+=(--num-epochs $OPTARG)
+            ;;
+        b)
+            params+=(--batch-size $OPTARG)
+            ;;
+        s)
+            params+=(--shift $OPTARG)
+            ;;
+        t)
+            params+=(--stride $OPTARG)
+            ;;
+        l)
+            params+=(--loss $OPTARG)
+            ;;
+        o)
+            params+=(--optimizer $OPTARG)
+            ;;
+        v)
+            params+=(--verbosity $OPTARG)
+            ;;
+        z)
+            params+=(--shuffle-buffer $OPTARG)
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+    esac
+done
+
+echo "PARAMS ${params[@]}"
+
+
+# issue train command to gcloud
 # user-defined args go after the open '--'
+
 gcloud ai-platform jobs submit training $JOB_NAME \
     --job-dir $JOB_DIR  \
     --staging-bucket $PACKAGE_STAGING_PATH \
@@ -37,5 +95,6 @@ gcloud ai-platform jobs submit training $JOB_NAME \
     --data-dir-train $TFRECORDS_DIR_TRAIN \
     --data-dir-validate $TFRECORDS_DIR_VALIDATE \
     --tboard-dir $JOB_RUN_DIR \
-    --saved-model-dir $SAVED_MODEL_DIR
+    --saved-model-dir $SAVED_MODEL_DIR \
+    "${params[@]}"
 
