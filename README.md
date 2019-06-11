@@ -18,8 +18,8 @@ To run the model in Google Cloud Platform (Team Members Only):
 
 1. Make sure you have access to the ion-age project
 2. Install GCloud SDK (https://cloud.google.com/sdk/docs/)
-3. Run from project dir:
+3. Run from project dir (run with -h to see configurable options):
 ```
-. train.sh
+./train.sh
 ```
   .  Follow output URL to stream logs.
