@@ -33,7 +33,7 @@ def create_keras_model(window_size, loss, optimizer):
 
     # define LSTM
     lstm_out = LSTM(20, activation='relu', name='recurrent')(all_concat)
-    main_output = Dense(1, name='output')(lstm_out)
+    main_output = Dense(2, name='output')(lstm_out)
 
     model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])
     model.compile(loss=loss, optimizer=optimizer)
