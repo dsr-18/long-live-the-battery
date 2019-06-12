@@ -172,9 +172,9 @@ def train_and_evaluate(args):
     tf.keras.experimental.export_saved_model(model, saved_model_dir)
 
 
-def calculate_steps_per_epoch(dataset, window_size, shift, stride, batch_size):
+def calculate_steps_per_epoch(data_dir, window_size, shift, stride, batch_size):
     temp_dataset = dp.create_dataset(
-                        data_dir=dataset,
+                        data_dir=data_dir,
                         window_size=window_size,
                         shift=shift,
                         stride=stride,
