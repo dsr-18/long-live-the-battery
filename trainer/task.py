@@ -128,8 +128,7 @@ def train_and_evaluate(args):
 
     # create model
     model = split_model.create_keras_model(window_size=args.window_size,
-                                           loss=args.loss,
-                                           optimizer=args.optimizer)
+                                           loss=args.loss)
 
     run_timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     if args.tboard_dir is None:

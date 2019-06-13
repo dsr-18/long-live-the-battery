@@ -5,7 +5,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 
 
-def create_keras_model(window_size, loss, optimizer):
+def create_keras_model(window_size, loss):
     """Creates the Keras model.
 
     Args:
