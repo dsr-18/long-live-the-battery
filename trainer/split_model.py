@@ -2,6 +2,7 @@ import trainer.constants as cst
 
 from tensorflow.keras.layers import concatenate, LSTM, Conv1D, Flatten, TimeDistributed, Input, Dense, MaxPooling1D
 from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
 
 
 def create_keras_model(window_size, loss, optimizer):
@@ -36,6 +37,6 @@ def create_keras_model(window_size, loss, optimizer):
     main_output = Dense(1, name='output')(lstm_out)
 
     model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])
-    model.compile(loss=loss, optimizer=optimizer)
+    model.compile(loss=loss, optimizer=Adam(clipvalue=5.))
 
     return model

@@ -81,11 +81,6 @@ def get_args():
         type=str,
         help='loss function used by the model, default=mean_squared_error')
     parser.add_argument(
-        '--optimizer',
-        default='adam',
-        type=str,
-        help='optimizer used by the model, default=adam')
-    parser.add_argument(
         '--shuffle',
         default=True,
         type=bool,

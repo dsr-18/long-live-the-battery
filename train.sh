@@ -60,9 +60,6 @@ while getopts ":hw:e:b:s:t:l:o:v:z" opt; do
         l)
             params+=(--loss $OPTARG)
             ;;
-        o)
-            params+=(--optimizer $OPTARG)
-            ;;
         a)
             params+=(--learning-rate $OPTARG)
             ;;
