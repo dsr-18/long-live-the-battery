@@ -1,6 +1,5 @@
 import pickle
 import warnings
-from os.path import join
 from pprint import pprint
 
 import numpy as np
@@ -28,12 +27,11 @@ def check_for_drop_warning(array_before, array_after, drop_warning_thresh=0.10):
     smaller than array_before and issues a warning in that case."""
     
     try:
-        assert float(len(array_before)-len(array_after)) / len(array_before) < drop_warning_thresh, \
+        assert float(len(array_before) - len(array_after)) / len(array_before) < drop_warning_thresh, \
             """More than {} percent of values were dropped ({} out of {}).""".format(
-                    drop_warning_thresh*100,
-                    len(array_before)-len(array_after),
-                    len(array_before)
-                )
+                drop_warning_thresh * 100,
+                len(array_before) - len(array_after),
+                len(array_before))
     except AssertionError as e:
         warnings.warn(str(e))
         # simple_plotly(array_before[-1], V_original=array_before[2])
@@ -95,15 +93,15 @@ def compute_outlier_dict(std_multiple_threshold, verbose=False, **kwargs):
         outlier_indeces = np.argwhere(outlier_mask)  # Get the indeces for all outliers
         
         if outlier_indeces.size > 0:  # Add outlier information to the outlier dict, if an outlier has been found
-            outlier_dict[key] = dict(std_diff = std_diff,
-                                     original_values = value[outlier_indeces],
-                                     diff_values = diff_values[outlier_indeces],
-                                     outlier_indeces = outlier_indeces,
+            outlier_dict[key] = dict(std_diff=std_diff,
+                                     original_values=value[outlier_indeces],
+                                     diff_values=diff_values[outlier_indeces],
+                                     outlier_indeces=outlier_indeces,
                                      outlier_mask=outlier_mask)
     
     if verbose and outlier_dict:  
         # If outlier_dict has any entries, then print a version without the mask (too big for printing)
-        outlier_dict_wo_mask = outlier_dict_without_mask(outlier_dict) # Generate a smaller dict for better printing
+        outlier_dict_wo_mask = outlier_dict_without_mask(outlier_dict)  # Generate a smaller dict for better printing
         print("############ Found outliers ############ ")
         pprint(outlier_dict_wo_mask)
         print("")
@@ -230,14 +228,15 @@ def handle_small_Qd_outliers(std_multiple_threshold, Qd, t, Qd_max_outlier=0.06)
         t {numpy.ndarray} -- t measurements corresponding to Qd
     
     Keyword Arguments:
-        Qd_max_outlier {float} -- The maximum absolute value for the found outliers in Qd, which get handled by this function.
+        Qd_max_outlier {float} -- The maximum absolute value for the found outliers in Qd, which get handled
+            by this function.
         This is needed only to make the function more specific. (default: {0.06})
     
     Returns:
         numpy.ndarray -- The interpolated version of Qd.
     """
     
-    Qd_= Qd.copy()  # Only copy Qd, since it is the only array values are assigned to
+    Qd_ = Qd.copy()  # Only copy Qd, since it is the only array values are assigned to
     outlier_dict = compute_outlier_dict(std_multiple_threshold, Qd=Qd_)
     
     if outlier_dict.get("Qd"):
@@ -260,7 +259,7 @@ def handle_small_Qd_outliers(std_multiple_threshold, Qd, t, Qd_max_outlier=0.06)
                 t[interp_mask],  # Where to evaluate the interpolation function.
                 t[~interp_mask],  # X values for the interpolation function.
                 Qd_[~interp_mask]  # Y values for the interpolation function.
-                )
+            )
             # Assign the interpolated values
             Qd_[interp_mask] = interp_values
             print("    Interpolated small Qd outlier from index {} to {}".format(start_id, i))
@@ -276,10 +275,12 @@ def make_strictly_decreasing(x_interp, y_interp, prepend_value=3.7):
         y_interp {numpy.ndarray} -- Monotonically decreasing values.
     
     Keyword Arguments:
-        prepend_value {float} -- Value to prepend to y_interp for assesing the difference to the preceding value. (default: {3.7})
+        prepend_value {float} -- Value to prepend to y_interp for assesing the difference to the preceding value.
+            (default: {3.7})
     
     Returns:
-        numpy.ndarray -- y_interp with interpolated values, where there used to be zero difference to the preceding value.
+        numpy.ndarray -- y_interp with interpolated values, where there used to be zero difference to
+            the preceding value.
     """
     y_interp_copy = y_interp.copy()
     # Make the tale interpolatable if the last value is not the single minimum.
@@ -293,7 +294,7 @@ def make_strictly_decreasing(x_interp, y_interp, prepend_value=3.7):
         x_interp[bigger_equal_zero_diff],  # Where to evaluate the interpolation function.
         x_interp[~bigger_equal_zero_diff],  # X values for the interpolation function.
         y_interp_copy[~bigger_equal_zero_diff]  # Y values for the interpolation function.
-        )
+    )
     y_interp_copy[bigger_equal_zero_diff] = interp_values
     
     # This has to be given, since interpolation will fail otherwise.
@@ -302,14 +303,12 @@ def make_strictly_decreasing(x_interp, y_interp, prepend_value=3.7):
     return y_interp_copy
 
 
-def preprocess_cycle(
-    cycle,
-    I_thresh=-3.99, 
-    Vdlin_start=3.5, 
-    Vdlin_stop=2.0, 
-    Vdlin_steps=1000,
-    return_original_data=False
-    ):
+def preprocess_cycle(cycle,
+                     I_thresh=-3.99, 
+                     Vdlin_start=3.5, 
+                     Vdlin_stop=2.0, 
+                     Vdlin_steps=cst.STEPS,
+                     return_original_data=False):
     """Processes data (Qd, T, V, t) from one cycle and resamples Qd, T and V to a predefinded dimension.
     discharging_time will be computed based on t and is the only returned feature that is a scalar.
     
@@ -317,7 +316,8 @@ def preprocess_cycle(
         cycle {dict} -- One cycle entry from the original data with keys 'I', 'Qd', 'T', 'V', 't'
     
     Keyword Arguments:
-        I_thresh {float} -- Only measurements where the current is smaller than this threshold are chosen (default: {-3.99})
+        I_thresh {float} -- Only measurements where the current is smaller than this threshold are chosen
+            (default: {-3.99})
         Vdlin_start {float} -- Start value for the resampled V (default: {3.5})
         Vdlin_stop {float} -- Stop value for the resampled V (default: {2.0})
         Vdlin_steps {int} -- Number of steps V, Qd and T are resampled (default: {1000})
@@ -334,19 +334,19 @@ def preprocess_cycle(
     I = cycle["I"]
     t = cycle["t"]
     
-    ## Only take the measurements during high current discharging.
+    # Only take the measurements during high current discharging.
     discharge_mask = I < I_thresh
     Qd, T, V, t = multiple_array_indexing(discharge_mask, Qd, T, V, t)
     
-    ## Sort all values after time.
+    # Sort all values after time.
     sorted_indeces = t.argsort()
     Qd, T, V, t = multiple_array_indexing(sorted_indeces, Qd, T, V, t)
     
-    ## Only take timesteps where time is strictly increasing.
+    # Only take timesteps where time is strictly increasing.
     increasing_time_mask = np.diff(t, prepend=0) > 0
     Qd, T, V, t = multiple_array_indexing(increasing_time_mask, Qd, T, V, t)
 
-    ## Dropping outliers.
+    # Dropping outliers.
     Qd, T, V, t = drop_cycle_big_t_outliers(15, Qd, T, V, t)
     
     Qd = handle_small_Qd_outliers(12, Qd, t)
@@ -358,8 +358,8 @@ def preprocess_cycle(
     # This way the resulting curves don't become skewed too much in the direction of smaller values.
     savgol_window_length = 25
     if savgol_window_length >= V.size:
-        raise DropCycleException("""Dropping cycle with less than {} V values.\nSizes --> Qd:{}, T:{}, V:{}, t:{}"""\
-                                 .format(savgol_window_length,Qd.size, T.size, V.size, t.size))
+        raise DropCycleException("""Dropping cycle with less than {} V values.\nSizes --> Qd:{}, T:{}, V:{}, t:{}"""
+                                 .format(savgol_window_length, Qd.size, T.size, V.size, t.size))
     V_savgol = savgol_filter(V, window_length=25, polyorder=2)
 
     # Only take the measurements, where V is monotonically decreasing (needed for interpolation).
@@ -368,29 +368,29 @@ def preprocess_cycle(
     v_decreasing_mask = V_savgol == np.minimum.accumulate(V_savgol)
     Qd, T, V, t = multiple_array_indexing(v_decreasing_mask, Qd, T, V_savgol, t, drop_warning=True)
     
-    ## Make V_3 strictly decreasing (needed for interpolation).
+    # Make V_3 strictly decreasing (needed for interpolation).
     V_strict_dec = make_strictly_decreasing(t, V)
 
     # Calculate discharging time. (Only scalar feature which is returned later)
     discharging_time = t.max() - t.min()
     if discharging_time < 6:
         print("Test")
-        raise DropCycleException("Dropping cycle with discharge_time = {}"\
+        raise DropCycleException("Dropping cycle with discharge_time = {}"
                                  .format(discharging_time))
     
-    ## Make interpolation function.
+    # Make interpolation function.
     Qd_interp_func = interp1d(
         V_strict_dec[::-1],  # V_strict_dec is inverted because it has to be increasing for interpolation.
         Qd[::-1],  # Qd and T are also inverted, so the correct values line up.
         bounds_error=False,  # Allows the function to be evaluated outside of the range of V_strict_dec.
         fill_value=(Qd[::-1][0], Qd[::-1][-1])  # Values to use, when evaluated outside of V_strict_dec.
-        )
+    )
     T_interp_func = interp1d(
         V_strict_dec[::-1],
         T[::-1],
         bounds_error=False,
         fill_value=(T[::-1][0], T[::-1][-1])
-        )
+    )
 
     # For resampling the decreasing order is chosen again.
     # The order doesn't matter for evaluating Qd_interp_func.
@@ -442,7 +442,7 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
         # The iteration is over a list of keys so the processed keys can be removed while iterating over the dict.
         # This reduces the memory used during processing.
         # If "for cell_key, cell_value in batch_dict.items()" is used,
-            # "del batch_dict[cell_key]" would throw an RuntimeError: dictionary changed size during iteration.
+        #    "del batch_dict[cell_key]" would throw an RuntimeError: dictionary changed size during iteration.
         cell_value = batch_dict[cell_key]
         # Initialite the cell results with all available scalar values.
         batch_results[cell_key] = dict(
@@ -454,7 +454,7 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
                 cst.DISCHARGE_TIME_NAME: []
             },
             cycles=dict()
-            )
+        )
         
         for cycle_key, cycle_value in cell_value["cycles"].items():
             # Has to be skipped since there are often times only two measurements.
@@ -462,8 +462,8 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
                 continue
             # Some cells have more cycle measurements than recorded cycle_life.
             # The reamining cycles will be dropped.
-            elif int(cycle_key) >  int(cell_value["cycle_life"][0][0]):
-                print("    Cell {} has more cycles than cycle_life ({}): Dropping remaining cycles {} to {}"\
+            elif int(cycle_key) > int(cell_value["cycle_life"][0][0]):
+                print("    Cell {} has more cycles than cycle_life ({}): Dropping remaining cycles {} to {}"
                       .format(cell_key,
                               cell_value["cycle_life"][0][0],
                               cycle_key,
@@ -490,7 +490,7 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
                 # Adding outlier dict from Exception to the cycles_drop_info.
                 drop_info = {
                     cell_key: {
-                        cycle_key: outlier_dict_without_mask(oe.outlier_dict) }}
+                        cycle_key: outlier_dict_without_mask(oe.outlier_dict)}}
                 cycles_drop_info.update(drop_info)
                 continue
             
@@ -520,7 +520,6 @@ def preprocess_batch(batch_dict, return_original_data=False, return_cycle_drop_i
         # Delete cell key from dict, to reduce used memory during processing.
         del batch_dict[cell_key]
     
-    
     cycles_drop_info["number_distinct_cells"] = len(cycles_drop_info)
     cycles_drop_info["number_distinct_cycles"] = sum([len(value) for key, value in cycles_drop_info.items()
                                                       if key != "number_distinct_cells"])
@@ -542,10 +541,10 @@ def describe_results_dict(results_dict):
     
     describe_dict.update(dict(
         cycle_life=dict(
-            max = np.max(cycle_life_list),
-            min = np.min(cycle_life_list),
-            mean = np.mean(cycle_life_list),
-            std = np.std(cycle_life_list)
+            max=np.max(cycle_life_list),
+            min=np.min(cycle_life_list),
+            mean=np.mean(cycle_life_list),
+            std=np.std(cycle_life_list)
         )
     ))
 
@@ -555,20 +554,20 @@ def describe_results_dict(results_dict):
               cst.REMAINING_CYCLES_NAME,
               cst.DISCHARGE_TIME_NAME]:
         summary_results[k] = dict(
-            max = np.max([np.max(cell["summary"][k]) for cell in results_dict.values()]),
-            min = np.min([np.min(cell["summary"][k]) for cell in results_dict.values()]),
-            mean = np.mean([np.mean(cell["summary"][k]) for cell in results_dict.values()]),
-            mean_std = np.std([np.std(cell["summary"][k]) for cell in results_dict.values()])
+            max=np.max([np.max(cell["summary"][k]) for cell in results_dict.values()]),
+            min=np.min([np.min(cell["summary"][k]) for cell in results_dict.values()]),
+            mean=np.mean([np.mean(cell["summary"][k]) for cell in results_dict.values()]),
+            mean_std=np.std([np.std(cell["summary"][k]) for cell in results_dict.values()])
         )
     describe_dict.update(dict(summary_results=summary_results))
     
     cycle_results = dict()
     for k in [cst.QDLIN_NAME, cst.TDLIN_NAME]:
         cycle_results[k] = dict(
-            max = np.max([np.max(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()]),
-            min = np.min([np.min(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()]),
-            mean = np.mean([np.mean(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()]),
-            mean_std = np.mean([np.std(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()])
+            max=np.max([np.max(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()]),
+            min=np.min([np.min(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()]),
+            mean=np.mean([np.mean(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()]),
+            mean_std=np.mean([np.std(cycle[k]) for cell in results_dict.values() for cycle in cell["cycles"].values()])
         )
     describe_dict.update(dict(cycle_results=cycle_results))
     
@@ -600,7 +599,8 @@ def main():
     
     save_preprocessed_data(results)
     print("Done!")
-    
+   
+ 
 if __name__ == "__main__":
     main()
 
