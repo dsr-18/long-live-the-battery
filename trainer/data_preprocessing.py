@@ -331,7 +331,7 @@ def preprocess_cycle(cycle,
     Qd = cycle["Qd"]
     T = cycle["T"]
     V = cycle["V"]
-    I = cycle["I"]
+    I = cycle["I"]  # noqa: E741
     t = cycle["t"]
     
     # Only take the measurements during high current discharging.
