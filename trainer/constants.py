@@ -14,16 +14,14 @@ VDLIN_NAME = 'Vdlin'
 REMAINING_CYCLES_NAME = 'Remaining_cycles'
 CURRENT_CYCLE_NAME = 'Current_cycle'
 
-REMAINING_CYCLES_SCALE_FACTOR = 3000  # Arbitrary number for division of Remaining_cycles, just to make it explicit.
-QD_SCALE_FACTOR = 1.1  # Capacity taken from product description of a standard lithium-ion battery
-
 # File paths
 TRAIN_TEST_SPLIT = "train_test_split.pkl"  # file location for train/test split definition
 PROCESSED_DATA = join("data", "processed_data.pkl")  # file location for processed data
 DATASETS_DIR = join("data", "tfrecords")  # base directory to write tfrecord files in
 TENSORBOARD_DIR = "Graph"  # base directory to write tensorboard logs in
-SAVED_MODELS_DIR_LOCAL = "saved_models" # base directory to save trained model in
+SAVED_MODELS_DIR_LOCAL = "saved_models"  # base directory to save trained model in
 BASE_DIR = "./"  # home directory
-TRAIN_SET = join("data", "tfrecords", "train", "*tfrecord")  # regexp files for the training set
-TEST_SET = join("data", "tfrecords", "test", "*tfrecord")  # regexp for the test set
-SECONDARY_TEST_SET = join("data", "tfrecords", "secondary_test", "*tfrecord")  # regexp for the secondary test set
+TRAIN_SET = join(DATASETS_DIR, "train", "*tfrecord")  # regexp files for the training set
+TEST_SET = join(DATASETS_DIR, "test", "*tfrecord")  # regexp for the test set
+SECONDARY_TEST_SET = join(DATASETS_DIR, "secondary_test", "*tfrecord")  # regexp for the secondary test set
+SCALING_FACTORS_DIR = join(DATASETS_DIR, "scaling_factors.csv")  # location for scaling factors for tfrecords files

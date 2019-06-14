@@ -1,34 +1,53 @@
+import csv
 import pickle
 import os
 
 import tensorflow as tf
-from tensorflow.train import FloatList, Int64List, Feature, Features, Example
+from tensorflow.train import FloatList, Feature, Features, Example
 
 import trainer.constants as cst
 
 
-def get_cycle_example(cell_value, summary_idx, cycle_idx):
+def get_cycle_example(cell_value, summary_idx, cycle_idx, scaling_factors):
     """
     Define the columns that should be written to tfrecords and converts the raw data
     to "Example" objects. Every Example contains data from one charging cycle.
+    The data is scaled (divided) by the corresponding values in "scaling_factors".
     """
+    # Summary feature values (scalars --> have to be wrapped in lists)
+    ir_value = [cell_value["summary"][cst.INTERNAL_RESISTANCE_NAME][summary_idx]
+                / scaling_factors[cst.INTERNAL_RESISTANCE_NAME]]
+    qd_value = [cell_value["summary"][cst.QD_NAME][summary_idx]
+                / scaling_factors[cst.QD_NAME]]
+    rc_value = [cell_value["summary"][cst.REMAINING_CYCLES_NAME][summary_idx]
+                / scaling_factors[cst.REMAINING_CYCLES_NAME]]
+    dt_value = [cell_value["summary"][cst.DISCHARGE_TIME_NAME][summary_idx]
+                / scaling_factors[cst.DISCHARGE_TIME_NAME]]
+    cc_value = [float(cycle_idx)
+                / scaling_factors[cst.REMAINING_CYCLES_NAME]]  # Same scale --> same scaling factor
+    
+    # Detail feature values (arrays)
+    qdlin_value = cell_value["cycles"][cycle_idx][cst.QDLIN_NAME] / scaling_factors[cst.QDLIN_NAME]
+    tdlin_value = cell_value["cycles"][cycle_idx][cst.TDLIN_NAME] / scaling_factors[cst.TDLIN_NAME]
+    
+    # Wrapping as example
     cycle_example = Example(
         features=Features(
             feature={
                 cst.INTERNAL_RESISTANCE_NAME:
-                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.INTERNAL_RESISTANCE_NAME][summary_idx]])),
+                    Feature(float_list=FloatList(value=ir_value)),
                 cst.QD_NAME:
-                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.QD_NAME][summary_idx]])),
+                    Feature(float_list=FloatList(value=qd_value)),
                 cst.REMAINING_CYCLES_NAME:
-                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.REMAINING_CYCLES_NAME][summary_idx]])),
+                    Feature(float_list=FloatList(value=rc_value)),
                 cst.DISCHARGE_TIME_NAME:
-                    Feature(float_list=FloatList(value=[cell_value["summary"][cst.DISCHARGE_TIME_NAME][summary_idx]])),
+                    Feature(float_list=FloatList(value=dt_value)),
                 cst.QDLIN_NAME:
-                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx][cst.QDLIN_NAME])),
+                    Feature(float_list=FloatList(value=qdlin_value)),
                 cst.TDLIN_NAME:
-                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx][cst.TDLIN_NAME])),
+                    Feature(float_list=FloatList(value=tdlin_value)),
                 cst.CURRENT_CYCLE_NAME:
-                    Feature(float_list=FloatList(value=[float(cycle_idx)]))
+                    Feature(float_list=FloatList(value=cc_value))
             }
         )
     )
@@ -53,11 +72,13 @@ def write_to_tfrecords(batteries, data_dir, train_test_split=None):
     # Create base directory for tfrecords
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
-
+    
+    scaling_factors = calculate_and_save_scaling_factors(batteries, train_test_split, cst.SCALING_FACTORS_DIR)
+    
     if train_test_split is None:
         # Write all cells into one directory
         for cell_name, cell_data in batteries.items():
-            write_single_cell(cell_name, cell_data, data_dir)
+            write_single_cell(cell_name, cell_data, data_dir, scaling_factors)
     else:
         # For each split set a new working directory in /Data/tfrecords
         # and write files there
@@ -68,10 +89,10 @@ def write_to_tfrecords(batteries, data_dir, train_test_split=None):
                 os.mkdir(split_data_dir)
             split_batteries = {idx: batteries[idx] for idx in split_indexes}
             for cell_name, cell_data in split_batteries.items():
-                write_single_cell(cell_name, cell_data, split_data_dir)
+                write_single_cell(cell_name, cell_data, split_data_dir, scaling_factors)
 
 
-def write_single_cell(cell_name, cell_data, data_dir):
+def write_single_cell(cell_name, cell_data, data_dir, scaling_factors):
     """
     Takes data for one cell and writes it to a tfrecords file with the naming convention
     "b1c0.tfrecord". The SerializeToString() method creates binary data out of the
@@ -80,7 +101,7 @@ def write_single_cell(cell_name, cell_data, data_dir):
     filename = os.path.join(data_dir, cell_name + ".tfrecord")
     with tf.io.TFRecordWriter(str(filename)) as f:
         for summary_idx, cycle_idx in enumerate(cell_data["cycles"].keys()):
-            cycle_to_write = get_cycle_example(cell_data, summary_idx, cycle_idx)
+            cycle_to_write = get_cycle_example(cell_data, summary_idx, cycle_idx, scaling_factors)
             f.write(cycle_to_write.SerializeToString())
     print("Created %s.tfrecords file." % cell_name)
 
@@ -139,30 +160,9 @@ def get_flatten_windows(window_size):
         }
         # For every window we want to have one target/label
         # so we only get the last row by skipping all but one row
-        target_flat = target.skip(window_size-1)
+        target_flat = target.skip(window_size - 1)
         return tf.data.Dataset.zip((features_flat, target_flat))
     return flatten_windows
-
-
-def normalize_feature(feature_name, window_data):
-    return tf.math.divide(tf.math.subtract(window_data[feature_name],
-                                           tf.math.reduce_min(window_data[feature_name])),
-                          tf.math.subtract(tf.math.reduce_max(window_data[feature_name]),
-                                           tf.math.reduce_min(window_data[feature_name])))
-    
-    
-def scale_features(window_data, window_target):
-    # Normalize values for one window: (data - min) / (max - min).
-    window_data[cst.TDLIN_NAME] = normalize_feature(cst.TDLIN_NAME, window_data)
-    window_data[cst.QDLIN_NAME] = normalize_feature(cst.QDLIN_NAME, window_data)
-    window_data[cst.INTERNAL_RESISTANCE_NAME] = normalize_feature(cst.INTERNAL_RESISTANCE_NAME, window_data)
-    window_data[cst.DISCHARGE_TIME_NAME] = normalize_feature(cst.DISCHARGE_TIME_NAME, window_data)
-    
-    # Scale features/targets based on hardcoded scaling factors.
-    window_data[cst.QD_NAME] = tf.math.divide(window_data[cst.QD_NAME], cst.QD_SCALE_FACTOR)
-    window_target = tf.math.divide(window_target, cst.REMAINING_CYCLES_SCALE_FACTOR)
-    
-    return window_data, window_target
 
 
 def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_remainder, batch_size):
@@ -178,7 +178,6 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
         dataset = dataset.map(parse_features)
         dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=drop_remainder)
         dataset = dataset.flat_map(get_flatten_windows(window_size))
-        dataset = dataset.map(scale_features)
         dataset = dataset.batch(batch_size)
         return dataset
     return create_cell_dataset_from_tfrecords
@@ -214,6 +213,49 @@ def create_dataset(data_dir, window_size, shift, stride, batch_size,
     if repeat:
         assembled_dataset = assembled_dataset.repeat()
     return assembled_dataset
+
+
+def calculate_and_save_scaling_factors(data_dict, train_test_split, csv_dir):
+    """Calculates the scaling factors for every feature based on the training set in train_test_split
+    and saves the result in a csv file. The factors are used during writing of the tfrecords files."""
+    
+    print("Calculate scaling factors...")
+    scaling_factors = dict()
+    
+    # Calculating max values for summary features
+    for k in [cst.INTERNAL_RESISTANCE_NAME,
+              cst.QD_NAME,
+              cst.REMAINING_CYCLES_NAME,  # The feature "Current_cycles" will be scaled by the same scaling factor
+              cst.DISCHARGE_TIME_NAME]:
+        # Two max() calls are needed, one for every cell, one over all cells
+        scaling_factors[k] = max([max(cell_v["summary"][k])
+                                  for cell_k, cell_v in data_dict.items()
+                                  if cell_k in train_test_split["train"]])
+    
+    # Calculating max values for detail features
+    for k in [cst.QDLIN_NAME,
+              cst.TDLIN_NAME]:
+        # Two max() calls are needed, one over every cycle array, one over all cycles (all cells included)
+        scaling_factors[k] = max([max(cycle_v[k])
+                                  for cell_k, cell_v in data_dict.items()
+                                  if cell_k in train_test_split["train"]
+                                  for cycle_v in cell_v["cycles"].values()])
+    
+    with open(csv_dir, 'w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=scaling_factors.keys())
+        writer.writeheader()  # Write the field names in the first line of the csv
+        writer.writerow(scaling_factors)  # Write values to the corrent fields
+    print("Saved scaling factors to {}".format(csv_dir))
+    print("Scaling factors: {}".format(scaling_factors))
+    return scaling_factors
+
+
+def load_scaling_factors(csv_dir=cst.SCALING_FACTORS_DIR):
+    """Reads the scaling factors from a csv and returns them as a dict."""
+    with open(csv_dir, mode='r') as file:
+        csv_reader = csv.DictReader(file)
+        for row in csv_reader:
+            return {k: float(v) for k, v in row.items()}  # Return only the first found line with numeric values
 
 
 # dev method
