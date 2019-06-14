@@ -11,11 +11,13 @@ pip install -r requirements_pip.txt
 ## Generate Local Data
 Before running the model, generate local data by running:
 1. Create a directory named /data in the base project directory with the three seed batch files (available for download ...)
+
 2. Remove data/processed_data.pkl file if exists.  Run
 ```
 python -m trainer.data_preprocessing
 ```
 to create processed_data.pkl.
+
 3. Remove data/tfrecords dir if exists.  Run
 ```
 python -m trainer.data_pipeline
