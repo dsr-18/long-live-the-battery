@@ -26,7 +26,9 @@ def get_cycle_example(cell_value, summary_idx, cycle_idx):
                 cst.QDLIN_NAME:
                     Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx][cst.QDLIN_NAME])),
                 cst.TDLIN_NAME:
-                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx][cst.TDLIN_NAME]))
+                    Feature(float_list=FloatList(value=cell_value["cycles"][cycle_idx][cst.TDLIN_NAME])),
+                cst.CURRENT_CYCLE_NAME:
+                    Feature(float_list=FloatList(value=[float(cycle_idx)]))
             }
         )
     )
@@ -98,11 +100,16 @@ def parse_features(example_proto):
         cst.QD_NAME: tf.io.FixedLenFeature([1, ], tf.float32),
         cst.DISCHARGE_TIME_NAME: tf.io.FixedLenFeature([1, ], tf.float32),
         cst.REMAINING_CYCLES_NAME: tf.io.FixedLenFeature([], tf.float32),
+        cst.CURRENT_CYCLE_NAME: tf.io.FixedLenFeature([], tf.float32),
         cst.TDLIN_NAME: tf.io.FixedLenFeature([cst.STEPS, cst.INPUT_DIM], tf.float32),
         cst.QDLIN_NAME: tf.io.FixedLenFeature([cst.STEPS, cst.INPUT_DIM], tf.float32)
     }
     examples = tf.io.parse_single_example(example_proto, feature_description)
-    targets = examples.pop(cst.REMAINING_CYCLES_NAME)
+    
+    target_remaining = examples.pop(cst.REMAINING_CYCLES_NAME)
+    target_current = examples.pop(cst.CURRENT_CYCLE_NAME)
+    targets = tf.stack([target_current, target_remaining], 0)
+    
     return examples, targets
 
 
@@ -151,7 +158,7 @@ def scale_features(window_data, window_target):
     window_data[cst.INTERNAL_RESISTANCE_NAME] = normalize_feature(cst.INTERNAL_RESISTANCE_NAME, window_data)
     window_data[cst.DISCHARGE_TIME_NAME] = normalize_feature(cst.DISCHARGE_TIME_NAME, window_data)
     
-    # Scale scalar features.
+    # Scale features/targets based on hardcoded scaling factors.
     window_data[cst.QD_NAME] = tf.math.divide(window_data[cst.QD_NAME], cst.QD_SCALE_FACTOR)
     window_target = tf.math.divide(window_target, cst.REMAINING_CYCLES_SCALE_FACTOR)
     
