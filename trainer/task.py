@@ -1,7 +1,6 @@
 import argparse
 import os
 from absl import logging
-import time
 import datetime
 
 import tensorflow as tf
@@ -53,12 +52,12 @@ def get_args():
         help='number of records to read during each training step, default=16')
     parser.add_argument(
         '--window-size',
-        default=100,
+        default=20,
         type=int,
         help='window size for sliding window in training sample generation, default=100')
     parser.add_argument(
         '--shift',
-        default=20,
+        default=5,
         type=int,
         help='shift for sliding window in training sample generation, default=20')
     parser.add_argument(

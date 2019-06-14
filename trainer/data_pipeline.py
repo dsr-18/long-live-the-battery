@@ -165,7 +165,7 @@ def get_flatten_windows(window_size):
     return flatten_windows
 
 
-def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_remainder, batch_size):
+def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_remainder):
     def create_cell_dataset_from_tfrecords(file):
         """
         The read_tfrecords() function reads a file, skipping the first row which in our case
@@ -178,7 +178,6 @@ def get_create_cell_dataset_from_tfrecords(window_size, shift, stride, drop_rema
         dataset = dataset.map(parse_features)
         dataset = dataset.window(size=window_size, shift=shift, stride=stride, drop_remainder=drop_remainder)
         dataset = dataset.flat_map(get_flatten_windows(window_size))
-        dataset = dataset.batch(batch_size)
         return dataset
     return create_cell_dataset_from_tfrecords
 
@@ -204,12 +203,15 @@ def create_dataset(data_dir, window_size, shift, stride, batch_size,
     """
     filepath_dataset = tf.data.Dataset.list_files(data_dir)
     assembled_dataset = filepath_dataset.interleave(get_create_cell_dataset_from_tfrecords(window_size, shift, stride,
-                                                                                           drop_remainder,
-                                                                                           batch_size),
+                                                                                           drop_remainder),
                                                     cycle_length=cycle_length,
                                                     num_parallel_calls=num_parallel_calls)
     if shuffle:
         assembled_dataset = assembled_dataset.shuffle(shuffle_buffer)
+    
+    # The batching has to happen after shuffling the windows, so one batch is not sequential
+    assembled_dataset = assembled_dataset.batch(batch_size)
+    
     if repeat:
         assembled_dataset = assembled_dataset.repeat()
     return assembled_dataset
