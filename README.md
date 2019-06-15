@@ -40,3 +40,29 @@ To run the model in Google Cloud Platform (Team Members Only):
 ./train.sh
 ```
   .  Follow output URL to stream logs.
+
+
+
+  ## Predict
+  On GCP:
+  ```
+  gcloud ai-platform predict --model ion_age --version v0004 --json-instances instances.json
+  ```
+
+  Locally:
+```
+gcloud ai-platform local predict --model-dir gs://ion_age_predict/trial/model --json-instances instances.json --framework TENSORFLOW
+```
+  
+
+
+# Upload New Model to GCP:
+
+  from predict/ folder:
+
+
+  ```
+  python setup.py sdist --formats=gztar
+  gsutil cp dist/my_custom_code-0.1.tar.gz gs://ion_age_predict/trial/
+  gcloud beta ai-platform versions create v0009 --model ion_age --runtime-version 1.13 --python-version 3.5 --origin gs://ion_age_predict/trial/model --package-uris gs://ion_age_predict/trial/my_custom_code-0.1.tar.gz --prediction-class predictor.MyPredictor
+  ```

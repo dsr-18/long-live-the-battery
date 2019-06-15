@@ -112,8 +112,8 @@ def train_and_evaluate(args):
     """
 
     # calculate steps_per_epoch_train, steps_per_epoch_test
-    steps_per_epoch_train = calculate_steps_per_epoch(args.data_dir_train, args.window_size, args.shift, args.stride, args.batch_size)
-    steps_per_epoch_validate = calculate_steps_per_epoch(args.data_dir_validate, args.window_size, args.shift, args.stride, args.batch_size)
+    steps_per_epoch_train = 2 #calculate_steps_per_epoch(args.data_dir_train, args.window_size, args.shift, args.stride, args.batch_size)
+    steps_per_epoch_validate = 2 #calculate_steps_per_epoch(args.data_dir_validate, args.window_size, args.shift, args.stride, args.batch_size)
     
     # load datasets
     dataset_train = dp.create_dataset(
@@ -168,7 +168,12 @@ def train_and_evaluate(args):
         saved_model_dir = os.path.join(cst.SAVED_MODELS_DIR_LOCAL, run_timestr)
     else:
         saved_model_dir = args.saved_model_dir
-    tf.keras.experimental.export_saved_model(model, saved_model_dir)
+
+    # tensorflow 1.13 way
+    tf.keras.models.save_model(model, args.job_dir)#os.path.join(saved_model_dir, 'model.h5'))
+
+    # tensorflow 2 way
+#    tf.keras.experimental.export_saved_model(model, saved_model_dir)
 
 
 def calculate_steps_per_epoch(data_dir, window_size, shift, stride, batch_size):
