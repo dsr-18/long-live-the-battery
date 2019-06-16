@@ -1,5 +1,6 @@
 import plotly.offline as pyo
 import plotly.graph_objs as go
+import numpy as np
 
 
 def print_dict_keys(print_dict, a=0, ident=2, max_depth=100):
@@ -14,10 +15,10 @@ def print_dict_keys(print_dict, a=0, ident=2, max_depth=100):
         max_depth {int} -- The maximum depth in the print_dict to print the keys. (default: {100})
     """
     for key, value in print_dict.items():
-        print(" "*a + f"[{key}]")
+        print(" " * a + f"[{key}]")
 
-        if isinstance(value, dict) and max_depth > a/ident:
-            print_dict_keys(value, a+ident, max_depth=max_depth)
+        if isinstance(value, dict) and max_depth > a / ident:
+            print_dict_keys(value, a + ident, max_depth=max_depth)
             
 
 def simple_plotly(x, inline=False, **kwargs):
@@ -33,7 +34,7 @@ def simple_plotly(x, inline=False, **kwargs):
             y=y_value, 
             mode='lines+markers', 
             name=y_key
-            )))
+        )))
     
     fig = go.Figure(traces)
     fig['layout'].update(height=1000, width=1000)
@@ -68,32 +69,32 @@ def plot_cycle_results(cycle_results_dict, inline=False):
         traces1.append(go.Scatter(dict(
             x=cycle_results_dict["Qd_original_data"], 
             y=cycle_results_dict["V_original_data"], 
-            mode = 'markers', 
+            mode='markers', 
             name='Qd original data'
-            )))
+        )))
     traces1.append(go.Scatter(dict(
         x=cycle_results_dict["Qd_resample"], 
         y=cycle_results_dict["V_resample"], 
         mode='lines+markers', 
         name='Qd resampled'
-        )))
+    )))
     
     traces2 = []
     if "T_original_data" in cycle_results_dict.keys():
         traces2.append(go.Scatter(dict(
             x=cycle_results_dict["T_original_data"],
             y=cycle_results_dict["V_original_data"],
-            mode = 'markers',
+            mode='markers',
             name='T original data'
-            )))
+        )))
     traces2.append(go.Scatter(dict(
         x=cycle_results_dict["T_resample"],
         y=cycle_results_dict["V_resample"],
-        mode= 'lines+markers',
+        mode='lines+markers',
         name='T resampled'
-        )))
+    )))
 
-    fig = tools.make_subplots(rows=2, cols=1)
+    fig = pyo.make_subplots(rows=2, cols=1)
 
     for trace in traces1:
         fig.append_trace(trace, 1, 1)
