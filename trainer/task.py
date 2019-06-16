@@ -50,7 +50,6 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
             self.current_loss = logs.get('val_loss')
             self.checkpoint_dir = os.path.join(self.log_dir, "checkpoints", "epoch_{}_loss_{}".format(epoch, self.current_loss))
             if self.save_best_only:
-                self.current_loss = logs.get('loss')
                 if self.current_loss < self.lowest_loss:
                     tf.keras.experimental.export_saved_model(self.model, self.checkpoint_dir)
                     self.lowest_loss = self.current_loss
