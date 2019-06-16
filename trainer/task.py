@@ -13,21 +13,21 @@ import trainer.constants as cst
 
 class CustomCheckpoints(tf.keras.callbacks.Callback):
     
-    def __init__(self, log_dir, save_best_only=False, period=1):
+    def __init__(self, log_dir, save_best_only=False, period=1, start_epoch=0):
         self.log_dir = log_dir
         self.save_best_only = save_best_only
         self.period = period
+        self.start_epoch = start_epoch
         
     def on_train_begin(self, logs=None):
         self.last_saved_epoch = 0
         self.lowest_loss = np.Inf
         
     def on_epoch_end(self, epoch, logs=None):
-        if epoch % self.period == 0:
-            self.checkpoint_dir = os.path.join(self.log_dir, "checkpoints", "epoch_{}".format(epoch))
-            print("Checkpoint Directory: {}".format(self.checkpoint_dir))
+        if (epoch % self.period == 0 and epoch >= self.start_epoch):
+            self.current_loss = logs.get('val_loss')
+            self.checkpoint_dir = os.path.join(self.log_dir, "checkpoints", "epoch_{}_loss_{}".format(epoch, self.current_loss))
             if self.save_best_only:
-                self.current_loss = logs.get('loss')
                 if self.current_loss < self.lowest_loss:
                     tf.keras.experimental.export_saved_model(self.model, self.checkpoint_dir)
                     self.lowest_loss = self.current_loss
@@ -136,8 +136,8 @@ def train_and_evaluate(args):
     """
 
     # calculate steps_per_epoch_train, steps_per_epoch_test
-    steps_per_epoch_train = calculate_steps_per_epoch(args.data_dir_train, args.window_size, args.shift, args.stride, args.batch_size)
-    steps_per_epoch_validate = calculate_steps_per_epoch(args.data_dir_validate, args.window_size, args.shift, args.stride, args.batch_size)
+    steps_per_epoch_train = 10#calculate_steps_per_epoch(args.data_dir_train, args.window_size, args.shift, args.stride, args.batch_size)
+    steps_per_epoch_validate = 10#calculate_steps_per_epoch(args.data_dir_validate, args.window_size, args.shift, args.stride, args.batch_size)
     
     # load datasets
     dataset_train = dp.create_dataset(
@@ -168,15 +168,12 @@ def train_and_evaluate(args):
         tf.keras.callbacks.TensorBoard(log_dir=tboard_dir,
                                        write_graph=True,
                                        histogram_freq=0,
-                                       write_images=True),
+                                       write_images=True
+                                       ),
         CustomCheckpoints(log_dir=tboard_dir,
-                          period=5,
-                          save_best_only=True),
-        # More callbacks for testing later
-        # tf.keras.callbacks.CSVLogger(os.path.join(args.tboard_dir, 'log.csv')),
-        # tf.keras.callbacks.ModelCheckpoint(os.path.join(args.tboard_dir, 'checkpoint_{epoch:02d}.h5'),
-        #                                    period=5,
-        #                                    save_best_only=True),
+                          save_best_only=True,
+                          start_epoch=80,
+        )
         ]
 
     # train model
