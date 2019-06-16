@@ -71,7 +71,7 @@ def log_acc_ratio_loss(y_true, y_pred):
     return tf.math.reduce_mean(log_acc_ratio)
 
 
-def create_keras_model(window_size, loss, optimizer):
+def create_keras_model(window_size, loss):
     """Creates the Keras model.
 
     Args:

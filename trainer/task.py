@@ -80,11 +80,6 @@ def get_args():
         type=str,
         help='loss function used by the model, default=mean_squared_error')
     parser.add_argument(
-        '--optimizer',
-        default='adam',
-        type=str,
-        help='optimizer used by the model, default=adam')
-    parser.add_argument(
         '--shuffle',
         default=True,
         type=bool,
@@ -132,8 +127,7 @@ def train_and_evaluate(args):
 
     # create model
     model = split_model.create_keras_model(window_size=args.window_size,
-                                           loss=args.loss,
-                                           optimizer=args.optimizer)
+                                           loss=args.loss)
 
     run_timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     if args.tboard_dir is None:
