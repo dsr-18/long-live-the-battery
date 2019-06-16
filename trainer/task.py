@@ -2,6 +2,7 @@ import argparse
 import os
 from absl import logging
 import datetime
+import numpy as np
 
 import tensorflow as tf
 
@@ -10,6 +11,34 @@ import trainer.split_model as split_model
 import trainer.constants as cst
 
 
+class CustomCheckpoints(tf.keras.callbacks.Callback):
+    
+    def __init__(self, log_dir, save_best_only=False, period=1):
+        self.log_dir = log_dir
+        self.save_best_only = save_best_only
+        self.period = period
+        
+    def on_train_begin(self, logs=None):
+        self.last_saved_epoch = 0
+        self.lowest_loss = np.Inf
+        
+    def on_epoch_end(self, epoch, logs=None):
+        if epoch % self.period == 0:
+            self.checkpoint_dir = os.path.join(self.log_dir, "checkpoints", "epoch_{}".format(epoch))
+            print("Checkpoint Directory: {}".format(self.checkpoint_dir))
+            if self.save_best_only:
+                self.current_loss = logs.get('loss')
+                if self.current_loss < self.lowest_loss:
+                    tf.keras.experimental.export_saved_model(self.model, self.checkpoint_dir)
+                    self.lowest_loss = self.current_loss
+                    self.last_saved_epoch = epoch
+            else:
+                tf.keras.experimental.export_saved_model(self.model, self.checkpoint_dir)
+
+    def on_train_end(self, logs=None):
+        print("Last saved model is from epoch {}".format(self.last_saved_epoch))
+        
+        
 def get_args():
     """Argument parser.
 
@@ -140,6 +169,9 @@ def train_and_evaluate(args):
                                        write_graph=True,
                                        histogram_freq=0,
                                        write_images=True),
+        CustomCheckpoints(log_dir=tboard_dir,
+                          period=5,
+                          save_best_only=True),
         # More callbacks for testing later
         # tf.keras.callbacks.CSVLogger(os.path.join(args.tboard_dir, 'log.csv')),
         # tf.keras.callbacks.ModelCheckpoint(os.path.join(args.tboard_dir, 'checkpoint_{epoch:02d}.h5'),
