@@ -5,7 +5,7 @@ REQUIRED_PACKAGES = ['numpy>=1.16',
  					 'pandas>=0.24',
 					 'h5py>=2.9.0',
 					 'scipy>=1.2.1',
-					 'tensorflow>=2.0.0a']
+					 'tensorflow-gpu>=2.0.0a']
 					 # for GPU, replace line above with:  
 					 # 'tensorflow-gpu>=2.0.0a']
 

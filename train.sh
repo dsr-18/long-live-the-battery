@@ -27,7 +27,7 @@ SAVED_MODEL_DIR="${JOB_RUN_DIR}/saved_model"
 
 # parse command-line args
 params=()
-while getopts ":hw:e:b:s:t:l:o:v:z" opt; do
+while getopts ":hw:e:b:s:t:l:o:v:z:" opt; do
     case $opt in
         h)
             printf "Options:\n\t -w window-size\

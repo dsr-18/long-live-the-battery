@@ -1,7 +1,6 @@
 import argparse
 import os
 from absl import logging
-import time
 import datetime
 
 import tensorflow as tf
@@ -53,12 +52,12 @@ def get_args():
         help='number of records to read during each training step, default=16')
     parser.add_argument(
         '--window-size',
-        default=100,
+        default=20,
         type=int,
         help='window size for sliding window in training sample generation, default=100')
     parser.add_argument(
         '--shift',
-        default=20,
+        default=5,
         type=int,
         help='shift for sliding window in training sample generation, default=20')
     parser.add_argument(
@@ -166,9 +165,9 @@ def train_and_evaluate(args):
     tf.keras.experimental.export_saved_model(model, saved_model_dir)
 
 
-def calculate_steps_per_epoch(dataset, window_size, shift, stride, batch_size):
+def calculate_steps_per_epoch(data_dir, window_size, shift, stride, batch_size):
     temp_dataset = dp.create_dataset(
-                        data_dir=dataset,
+                        data_dir=data_dir,
                         window_size=window_size,
                         shift=shift,
                         stride=stride,
