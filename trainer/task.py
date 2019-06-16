@@ -12,19 +12,41 @@ import trainer.constants as cst
 
 
 class CustomCheckpoints(tf.keras.callbacks.Callback):
+    """
+    Custom callback function with ability to save the model to GCP.
+    The SavedModel contains:
+
+    1) a checkpoint containing the model weights. (variables/)
+    2) a SavedModel proto containing the Tensorflow backend 
+    graph. (saved_model.pb)
+    3) the model's json config. (assets/)
+
+    For big models too many checkpoints can blow up the size of the
+    log directory. To reduce the number of checkpoints, use the
+    parameters below.
     
-    def __init__(self, log_dir, save_best_only=False, period=1, start_epoch=0):
+    log_dir: The base directory of all log files. Checkpoints
+    will be saved in a "checkpoints" directory within this directory.
+    
+    start_epoch: The epoch after which checkpoints are saved.
+    
+    save_best_only: Only save a model if it has a lower validation loss
+    than all previously saved models.
+    
+    period: Save model only for every n-th epoch.
+    """
+    def __init__(self, log_dir, start_epoch, save_best_only=False, period=1):
         self.log_dir = log_dir
+        self.start_epoch = start_epoch
         self.save_best_only = save_best_only
         self.period = period
-        self.start_epoch = start_epoch
         
     def on_train_begin(self, logs=None):
-        self.last_saved_epoch = 0
+        self.last_saved_epoch = None
         self.lowest_loss = np.Inf
         
     def on_epoch_end(self, epoch, logs=None):
-        if (epoch % self.period == 0 and epoch >= self.start_epoch):
+        if (epoch % self.period == 0) and (epoch >= self.start_epoch):
             self.current_loss = logs.get('val_loss')
             self.checkpoint_dir = os.path.join(self.log_dir, "checkpoints", "epoch_{}_loss_{}".format(epoch, self.current_loss))
             if self.save_best_only:
@@ -118,7 +140,13 @@ def get_args():
         '--shuffle-buffer',
         default=500,
         type=int,
-        help='Bigger buffer size means better shuffling but longer setup time.'
+        help='Bigger buffer size means better shuffling but longer setup time. Default=500'
+    )
+    parser.add_argument(
+        '--save-from',
+        default=80,
+        type=int,
+        help='epoch after which model checkpoints are saved, default=80'
     )
     args, _ = parser.parse_known_args()
     return args
@@ -136,8 +164,8 @@ def train_and_evaluate(args):
     """
 
     # calculate steps_per_epoch_train, steps_per_epoch_test
-    steps_per_epoch_train = 10#calculate_steps_per_epoch(args.data_dir_train, args.window_size, args.shift, args.stride, args.batch_size)
-    steps_per_epoch_validate = 10#calculate_steps_per_epoch(args.data_dir_validate, args.window_size, args.shift, args.stride, args.batch_size)
+    steps_per_epoch_train = calculate_steps_per_epoch(args.data_dir_train, args.window_size, args.shift, args.stride, args.batch_size)
+    steps_per_epoch_validate = calculate_steps_per_epoch(args.data_dir_validate, args.window_size, args.shift, args.stride, args.batch_size)
     
     # load datasets
     dataset_train = dp.create_dataset(
@@ -166,13 +194,11 @@ def train_and_evaluate(args):
 
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=tboard_dir,
-                                       write_graph=True,
                                        histogram_freq=0,
-                                       write_images=True
                                        ),
         CustomCheckpoints(log_dir=tboard_dir,
                           save_best_only=True,
-                          start_epoch=80,
+                          start_epoch=args.save_from,
         )
         ]
 
@@ -186,11 +212,8 @@ def train_and_evaluate(args):
         verbose=1,
         callbacks=callbacks)
     
-    # export saved model
-    if args.saved_model_dir is None:
-        saved_model_dir = os.path.join(cst.SAVED_MODELS_DIR_LOCAL, run_timestr)
-    else:
-        saved_model_dir = args.saved_model_dir
+    # save model from last epoch
+    saved_model_dir = os.path.join(tboard_dir, "checkpoints", "last_epoch")
     tf.keras.experimental.export_saved_model(model, saved_model_dir)
 
 
