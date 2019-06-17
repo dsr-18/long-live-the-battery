@@ -101,7 +101,7 @@ def create_keras_model(window_size, loss):
     # define LSTM
     lstm_out = LSTM(64, activation='relu', name='recurrent')(all_concat)
     hidden_dense = Dense(32, name='hidden', activation='relu')(lstm_out)
-    main_output = Dense(2, name='output')(hidden_dense)  # Try different activations that are not negative
+    main_output = Dense(2, name='output', activation='relu')(hidden_dense)  # Relu activation for striclty positive outputs
 
     model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])
     
