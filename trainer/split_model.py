@@ -88,19 +88,30 @@ def create_keras_model(window_size, loss):
     detail_concat = concatenate([qdlin_in, tdlin_in], axis=3, name='detail_concat')
 
     # define CNN
-    cnn_out = TimeDistributed(Conv1D(filters=16, kernel_size=5, activation='relu'), name='convolution')(detail_concat)
+    cnn_out = TimeDistributed(Conv1D(filters=16,
+                                     kernel_size=3,
+                                     activation='relu',
+                                     padding='same'), name='convolution')(detail_concat)
     # Add some maxpools to reduce output size
     cnn_maxpool = TimeDistributed(MaxPooling1D(), name='conv_pool')(cnn_out)
-    cnn_out2 = TimeDistributed(Conv1D(filters=16, kernel_size=5, activation='relu'), name='conv2')(cnn_maxpool)
+    cnn_out2 = TimeDistributed(Conv1D(filters=16,
+                                      kernel_size=3,
+                                      activation='relu',
+                                      padding='same'), name='conv2')(cnn_maxpool)
     cnn_maxpool2 = TimeDistributed(MaxPooling1D(), name='pool2')(cnn_out2)
-    cnn_flat = TimeDistributed(Flatten(), name='convolution_flat')(cnn_maxpool2)
+    cnn_out3 = TimeDistributed(Conv1D(filters=16,
+                                      kernel_size=3,
+                                      activation='relu',
+                                      padding='same'), name='conv3')(cnn_maxpool2)
+    cnn_maxpool3 = TimeDistributed(MaxPooling1D(), name='pool3')(cnn_out3)
+    cnn_flat = TimeDistributed(Flatten(), name='convolution_flat')(cnn_maxpool3)
 
     # combine CNN output with all data from summary level
     all_concat = concatenate([cnn_flat, ir_in, dt_in, qd_in], axis=2, name='all_concat')
 
     # define LSTM
-    lstm_out = LSTM(64, activation='relu', name='recurrent')(all_concat)
-    hidden_dense = Dense(32, name='hidden', activation='relu')(lstm_out)
+    lstm_out = LSTM(128, activation='relu', name='recurrent')(all_concat)
+    hidden_dense = Dense(64, name='hidden', activation='relu')(lstm_out)
     main_output = Dense(2, name='output', activation='relu')(hidden_dense)  # Relu activation for striclty positive outputs
 
     model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])
