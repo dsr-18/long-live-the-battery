@@ -118,6 +118,6 @@ def create_keras_model(window_size, loss):
     
     metrics_list = [mae_current_cycle, mae_remaining_cycles]
     
-    model.compile(loss=loss, optimizer=Adam(clipnorm=1.), metrics=metrics_list)  # Try lower learning rate
+    model.compile(loss=loss, optimizer=Adam(lr=0.0001, clipnorm=1.), metrics=metrics_list)  # Try lower learning rate
 
     return model
