@@ -16,18 +16,16 @@ now=$(date +"%Y%m%d_%H%M%S")
 JOB_NAME="ion_age_$now"
 
 # user-specified args
-
 TFRECORDS_DIR_TRAIN="gs://${BUCKET}/data/tfrecords/train/*tfrecord"
 TFRECORDS_DIR_VALIDATE="gs://${BUCKET}/data/tfrecords/test/*tfrecord"
 
 # put TensorBoard logs, saved models in individual run dirs
 JOB_RUN_DIR="${PACKAGE_STAGING_PATH}/${JOB_NAME}"
-SAVED_MODEL_DIR="${JOB_RUN_DIR}/saved_model"
 
 
 # parse command-line args
 params=()
-while getopts ":hw:e:b:s:t:l:o:v:z:" opt; do
+while getopts ":hw:e:b:s:t:l:o:v:z:f:" opt; do
     case $opt in
         h)
             printf "Options:\n\t -w window-size\
@@ -39,6 +37,7 @@ while getopts ":hw:e:b:s:t:l:o:v:z:" opt; do
                             \n\t -o optimizer\
                             \n\t -a learning-rate\
                             \n\t -v verbosity\
+                            \n\t -f save-from\
                             \n\t -z shuffle-buffer\n" >&2
             exit 1
             ;;
@@ -69,6 +68,9 @@ while getopts ":hw:e:b:s:t:l:o:v:z:" opt; do
         z)
             params+=(--shuffle-buffer $OPTARG)
             ;;
+        f)
+            params+=(--save-from $OPTARG)
+            ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
             exit 1
@@ -96,6 +98,5 @@ gcloud ai-platform jobs submit training $JOB_NAME \
     --data-dir-train $TFRECORDS_DIR_TRAIN \
     --data-dir-validate $TFRECORDS_DIR_VALIDATE \
     --tboard-dir $JOB_RUN_DIR \
-    --saved-model-dir $SAVED_MODEL_DIR \
     "${params[@]}"
 
