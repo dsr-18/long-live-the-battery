@@ -1,6 +1,4 @@
-import os
-os.environ["CUDA_VISIBLE_DEVICES"]="-1"
-
+import itertools
 import argparse
 import os
 from absl import logging
@@ -66,36 +64,36 @@ def run(run_dir, hparams):
         tf.summary.scalar('remaining_mae', mae_remaining, step=1)
 
   
-def grid_search(args):
-    print("STARTING NEW GRIDSEARCH")
-    # Define hyperparameters
-    NUM_LSTM_UNITS = hp.HParam('NUM_LSTM_UNITS', hp.Discrete([8]))
-    CONV_KERNEL = hp.HParam('CONV_KERNEL', hp.Discrete([3, 5]))
-    """
-    CONV_FILTERS = hp.HParam('CONV_FILTERS', hp.Discrete([8, 16]))
-    Parameters not being used for hyperparameter tuning:
-    NUM_DENSE_UNITS = hp.HParam('NUM_DENSE_UNITS', hp.Discrete([32]))
-    """
-    
+def get_hyperparameter_grid(hyperparameters):
+    keys = [param.name for param in hyperparameters]
+    values = [param.domain.values for param in hyperparameters]
+    return [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+  
+def grid_search(args):    
     run_timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     if args.tboard_dir is None:
         tboard_dir = os.path.join(cst.TENSORBOARD_DIR, run_timestr + "_gridsearch")
     else:
         tboard_dir = os.path.join(args.tboard_dir + "_gridsearch")
         
+    # pick the parameters to tune
+    hyperparameters = [
+        hp.HParam('NUM_LSTM_UNITS', hp.Discrete([8])),
+        hp.HParam('CONV_KERNEL', hp.Discrete([3, 5])),
+        hp.HParam('CONV_FILTERS', hp.Discrete([8, 16])),
+        hp.HParam('NUM_DENSE_UNITS', hp.Discrete([32])),
+        ]
+        
     session_num = 0
-    for lstm_units in NUM_LSTM_UNITS.domain.values:
-        for filters in CONV_KERNEL.domain.values:
-            hparams = {
-                NUM_LSTM_UNITS.name: lstm_units,
-                CONV_KERNEL.name: filters,
-            }
-            print("RUN TIMESTR: {}".format(run_timestr))
-            run_name = "run-{}_{}".format(session_num, run_timestr)
-            print('--- Starting trial: {}'.format(run_name))
-            print({h: hparams[h] for h in hparams})
-            run(os.path.join(tboard_dir, run_name), hparams)
-            session_num += 1
+    
+    for hparams in get_hyperparameter_grid(hyperparameters):
+        print("RUN TIMESTR: {}".format(run_timestr))
+        run_name = "run-{}_{}".format(session_num, run_timestr)
+        print('--- Starting trial: {}'.format(run_name))
+        print({h: hparams[h] for h in hparams})
+        run(os.path.join(tboard_dir, run_name), hparams)
+        session_num += 1
             
             
 if __name__ == "__main__":                
