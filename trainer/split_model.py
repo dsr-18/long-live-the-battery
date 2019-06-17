@@ -110,9 +110,10 @@ def create_keras_model(window_size, loss):
     all_concat = concatenate([cnn_flat, ir_in, dt_in, qd_in], axis=2, name='all_concat')
 
     # define LSTM
-    lstm_out = LSTM(128, activation='relu', name='recurrent')(all_concat)
+    lstm_out = LSTM(128, activation='relu', name='recurrent', dropout=0.4)(all_concat)
     hidden_dense = Dense(64, name='hidden', activation='relu')(lstm_out)
-    main_output = Dense(2, name='output', activation='relu')(hidden_dense)  # Relu activation for striclty positive outputs
+    # Relu activation on the last layer for striclty positive outputs
+    main_output = Dense(2, name='output', activation='relu')(hidden_dense)
 
     model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])
     
