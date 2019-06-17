@@ -1,3 +1,4 @@
+from plotly import tools
 import plotly.offline as pyo
 import plotly.graph_objs as go
 import numpy as np
@@ -94,7 +95,7 @@ def plot_cycle_results(cycle_results_dict, inline=False):
         name='T resampled'
     )))
 
-    fig = pyo.make_subplots(rows=2, cols=1)
+    fig = tools.make_subplots(rows=2, cols=1)
 
     for trace in traces1:
         fig.append_trace(trace, 1, 1)
