@@ -5,6 +5,7 @@ import datetime
 import numpy as np
 
 import tensorflow as tf
+from google.cloud import storage
 
 import trainer.data_pipeline as dp
 import trainer.split_model as split_model
@@ -28,6 +29,12 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
     log_dir: The base directory of all log files. Checkpoints
     will be saved in a "checkpoints" directory within this directory.
     
+    dataset_path: data that is used for plotting the validation results.
+    
+    dataset_config: Same config file that is used for creating the training and
+        validation datasets in train_and_evaluate(). This is needed to make the
+        validation plot compareable.
+    
     start_epoch: The epoch after which checkpoints are saved.
     
     save_best_only: Only save a model if it has a lower validation loss
@@ -40,7 +47,18 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
         self.start_epoch = start_epoch
         self.save_best_only = save_best_only
         self.period = period
-        
+        self.client = storage.Client()
+        self.bucket = self.client.get_bucket(cst.BUCKET_NAME)  # Only used for saving evaluation plots
+        self.validation_dataset = dp.create_dataset(data_dir=dataset_path,
+                                                    window_size=dataset_config["window_size"],
+                                                    shift=dataset_config["shift"],
+                                                    stride=dataset_config["stride"],
+                                                    batch_size=dataset_config["batch_size"],
+                                                    cycle_length=1,  # Has to be set for plotting
+                                                    num_parallel_calls=1,  # Has to be set for plotting
+                                                    shuffle=False,  # Has to be set for plotting
+                                                    repeat=False)  # Has to be set for plotting
+    
     def on_train_begin(self, logs=None):
         self.last_saved_epoch = None
         self.lowest_loss = np.Inf
