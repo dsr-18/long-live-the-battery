@@ -162,25 +162,32 @@ def train_and_evaluate(args):
     Args:
     args: dictionary of arguments - see get_args() for details
     """
+    # Config datasets for consistent usage
+    ds_config = dict(window_size=args.window_size,
+                     shift=args.shift,
+                     stride=args.stride,
+                     batch_size=args.batch_size)
+    ds_train_path = args.data_dir_train
+    ds_val_path = args.data_dir_validate
 
-    # calculate steps_per_epoch_train, steps_per_epoch_test
-    steps_per_epoch_train = calculate_steps_per_epoch(args.data_dir_train, args.window_size, args.shift, args.stride, args.batch_size)
-    steps_per_epoch_validate = calculate_steps_per_epoch(args.data_dir_validate, args.window_size, args.shift, args.stride, args.batch_size)
+    # Calculate steps_per_epoch_train, steps_per_epoch_test
+    # This is needed, since for counting repeat has to be false
+    steps_per_epoch_train = calculate_steps_per_epoch(data_dir=ds_train_path, dataset_config=ds_config)
+    
+    steps_per_epoch_validate = calculate_steps_per_epoch(data_dir=ds_val_path, dataset_config=ds_config)
     
     # load datasets
-    dataset_train = dp.create_dataset(
-                        data_dir=args.data_dir_train,
-                        window_size=args.window_size,
-                        shift=args.shift,
-                        stride=args.stride,
-                        batch_size=args.batch_size)
-
-    dataset_validate = dp.create_dataset(
-                        data_dir=args.data_dir_validate,
-                        window_size=args.window_size,
-                        shift=args.shift,
-                        stride=args.stride,
-                        batch_size=args.batch_size)
+    dataset_train = dp.create_dataset(data_dir=ds_train_path,
+                                      window_size=ds_config["window_size"],
+                                      shift=ds_config["shift"],
+                                      stride=ds_config["stride"],
+                                      batch_size=ds_config["batch_size"])
+    
+    dataset_validate = dp.create_dataset(data_dir=ds_val_path,
+                                         window_size=ds_config["window_size"],
+                                         shift=ds_config["shift"],
+                                         stride=ds_config["stride"],
+                                         batch_size=ds_config["batch_size"])
 
     # create model
     model = split_model.create_keras_model(window_size=args.window_size,
@@ -217,14 +224,13 @@ def train_and_evaluate(args):
     tf.keras.experimental.export_saved_model(model, saved_model_dir)
 
 
-def calculate_steps_per_epoch(data_dir, window_size, shift, stride, batch_size):
-    temp_dataset = dp.create_dataset(
-                        data_dir=data_dir,
-                        window_size=window_size,
-                        shift=shift,
-                        stride=stride,
-                        batch_size=batch_size,
-                        repeat=False)
+def calculate_steps_per_epoch(data_dir, dataset_config):
+    temp_dataset = dp.create_dataset(data_dir=data_dir,
+                                     window_size=dataset_config["window_size"],
+                                     shift=dataset_config["shift"],
+                                     stride=dataset_config["stride"],
+                                     batch_size=dataset_config["batch_size"],
+                                     repeat=False)
     steps_per_epoch = 0
     for batch in temp_dataset:
         steps_per_epoch += 1
