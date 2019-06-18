@@ -110,7 +110,7 @@ def create_keras_model(window_size, loss):
     all_concat = concatenate([cnn_flat, ir_in, dt_in, qd_in], axis=2, name='all_concat')
 
     # define LSTM
-    lstm_out = LSTM(128, activation='relu', name='recurrent', dropout=0.4)(all_concat)
+    lstm_out = LSTM(128, activation='tanh', name='recurrent')(all_concat)
     hidden_dense = Dense(64, name='hidden', activation='relu')(lstm_out)
     # Relu activation on the last layer for striclty positive outputs
     main_output = Dense(2, name='output', activation='relu')(hidden_dense)
@@ -119,6 +119,6 @@ def create_keras_model(window_size, loss):
     
     metrics_list = [mae_current_cycle, mae_remaining_cycles]
     
-    model.compile(loss=loss, optimizer=Adam(lr=0.0001, clipnorm=1.), metrics=metrics_list)  # Try lower learning rate
+    model.compile(loss=loss, optimizer=Adam(lr=0.0001, clipnorm=1.), metrics=metrics_list)
 
     return model
