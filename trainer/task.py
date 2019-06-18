@@ -188,13 +188,14 @@ def train_and_evaluate(args):
 
     run_timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     if args.tboard_dir is None:
-        tboard_dir = os.path.join(cst.TENSORBOARD_DIR, run_timestr)
+        tboard_dir = os.path.join(cst.TENSORBOARD_DIR, "jobs", run_timestr)
     else:
         tboard_dir = args.tboard_dir
 
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=tboard_dir,
                                        histogram_freq=0,
+                                       write_graph=False,
                                        ),
         CustomCheckpoints(log_dir=tboard_dir,
                           save_best_only=True,

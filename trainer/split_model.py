@@ -1,6 +1,3 @@
-import os
-os.environ["CUDA_VISIBLE_DEVICES"]="-1"
-
 import trainer.constants as cst
 
 from tensorflow.keras.layers import concatenate, LSTM, Conv1D, Flatten, TimeDistributed, Input, Dense, MaxPooling1D
@@ -84,23 +81,26 @@ def create_keras_model(window_size, loss, hparams_config=None):
     loss: Loss function of the model.
     
     hparams_config: A dictionary of hyperparameters that can be used
-    to test multiple configurations (hp tuning). Default is the 
+    to test multiple configurations (hpo). Default is the 
     'hparams' dictionary that is defined at the beginning of this
-    function. When a hyperparameter key from hparams_config
-    matches a key from hparams, it overwrites that entry.
+    function. This dictionary is used for standard non-hpo jobs
+    and for any parameter that is not defined in a hpo job.
     """
     
     # Default configuration
     hparams = {
-        "NUM_LSTM_UNITS": 65,
-        "CONV_FILTERS": 16,
-        "CONV_KERNEL": 5,
-        "NUM_DENSE_UNITS": 32,
+        cst.CONV_FILTERS: 16,
+        cst.CONV_KERNEL: 5,
+        cst.CONV_ACTIVATION: "relu",
+        cst.LSTM_NUM_UNITS: 65,
+        cst.LSTM_ACTIVATION: "sigmoid",
+        cst.DENSE_NUM_UNITS: 32,
+        cst.DENSE_ACTIVATION: "relu",
     }
+    # update hyperparameters with arguments from task_hyperparameter.py
     if hparams_config:
         hparams.update(hparams_config)
 
-    print("HPARAMS FOR TRAINING:\n{}".format(hparams))
     # define Inputs
     qdlin_in = Input(shape=(window_size, cst.STEPS, cst.INPUT_DIM), name=cst.QDLIN_NAME)
     tdlin_in = Input(shape=(window_size, cst.STEPS, cst.INPUT_DIM), name=cst.TDLIN_NAME)
@@ -112,10 +112,10 @@ def create_keras_model(window_size, loss, hparams_config=None):
     detail_concat = concatenate([qdlin_in, tdlin_in], axis=3, name='detail_concat')
 
     # define CNN
-    cnn_out = TimeDistributed(Conv1D(filters=hparams["CONV_FILTERS"], kernel_size=hparams["CONV_KERNEL"], activation='relu'), name='convolution')(detail_concat)
+    cnn_out = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS], kernel_size=hparams[cst.CONV_KERNEL], activation=hparams[cst.CONV_ACTIVATION]), name='convolution')(detail_concat)
     # Add some maxpools to reduce output size
     cnn_maxpool = TimeDistributed(MaxPooling1D(), name='conv_pool')(cnn_out)
-    cnn_out2 = TimeDistributed(Conv1D(filters=hparams["CONV_FILTERS"], kernel_size=hparams["CONV_KERNEL"], activation='relu'), name='conv2')(cnn_maxpool)
+    cnn_out2 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS], kernel_size=hparams[cst.CONV_KERNEL], activation=hparams[cst.CONV_ACTIVATION]), name='conv2')(cnn_maxpool)
     cnn_maxpool2 = TimeDistributed(MaxPooling1D(), name='pool2')(cnn_out2)
     cnn_flat = TimeDistributed(Flatten(), name='convolution_flat')(cnn_maxpool2)
 
@@ -123,8 +123,8 @@ def create_keras_model(window_size, loss, hparams_config=None):
     all_concat = concatenate([cnn_flat, ir_in, dt_in, qd_in], axis=2, name='all_concat')
 
     # define LSTM
-    lstm_out = LSTM(hparams["NUM_LSTM_UNITS"], activation='relu', name='recurrent')(all_concat)
-    hidden_dense = Dense(hparams["NUM_DENSE_UNITS"], name='hidden', activation='relu')(lstm_out)
+    lstm_out = LSTM(hparams[cst.LSTM_NUM_UNITS], activation=hparams[cst.LSTM_ACTIVATION], name='recurrent')(all_concat)
+    hidden_dense = Dense(hparams[cst.DENSE_NUM_UNITS], name='hidden', activation=hparams[cst.DENSE_ACTIVATION])(lstm_out)
     main_output = Dense(2, name='output')(hidden_dense)  # Try different activations that are not negative
 
     model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])

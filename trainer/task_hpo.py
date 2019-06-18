@@ -11,6 +11,7 @@ import trainer.data_pipeline as dp
 import trainer.split_model as split_model
 import trainer.constants as cst
 import trainer.task as task
+from trainer.hp_config import split_model_hparams
     
     
 def train_and_evaluate(hparams, run_dir):
@@ -51,6 +52,10 @@ def train_and_evaluate(hparams, run_dir):
         callbacks=callbacks,
     )    
 
+    # save model from last epoch
+    saved_model_dir = os.path.join(run_dir, "last_epoch_checkpoint")
+    tf.keras.experimental.export_saved_model(model, saved_model_dir)
+    
     mae_current = min(history.history["val_mae_current_cycle"])
     mae_remaining = min(history.history["val_mae_remaining_cycles"])
     return mae_current, mae_remaining
@@ -58,12 +63,12 @@ def train_and_evaluate(hparams, run_dir):
 
 def run(run_dir, hparams):
     with tf.summary.create_file_writer(run_dir).as_default():
-        hp.hparams(hparams)  # record the values used in this trial
+        hp.hparams(hparams)
         mae_current, mae_remaining = train_and_evaluate(hparams, run_dir)
         tf.summary.scalar('current_mae', mae_current, step=1)
         tf.summary.scalar('remaining_mae', mae_remaining, step=1)
-
-  
+        
+        
 def get_hyperparameter_grid(hyperparameters):
     keys = [param.name for param in hyperparameters]
     values = [param.domain.values for param in hyperparameters]
@@ -73,20 +78,14 @@ def get_hyperparameter_grid(hyperparameters):
 def grid_search(args):    
     run_timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     if args.tboard_dir is None:
-        tboard_dir = os.path.join(cst.TENSORBOARD_DIR, run_timestr + "_gridsearch")
+        tboard_dir = os.path.join(cst.TENSORBOARD_DIR, "gridsearches", run_timestr + "_gridsearch")
     else:
         tboard_dir = os.path.join(args.tboard_dir + "_gridsearch")
         
-    # pick the parameters to tune
-    hyperparameters = [
-        hp.HParam('NUM_LSTM_UNITS', hp.Discrete([8])),
-        hp.HParam('CONV_KERNEL', hp.Discrete([3, 5])),
-        hp.HParam('CONV_FILTERS', hp.Discrete([8, 16])),
-        hp.HParam('NUM_DENSE_UNITS', hp.Discrete([32])),
-        ]
-        
-    session_num = 0
+    # to pick parameters that are iterated over, edit hp_config.py
+    hyperparameters = split_model_hparams
     
+    session_num = 0
     for hparams in get_hyperparameter_grid(hyperparameters):
         print("RUN TIMESTR: {}".format(run_timestr))
         run_name = "run-{}_{}".format(session_num, run_timestr)
