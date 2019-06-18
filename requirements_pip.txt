@@ -1,2 +1,4 @@
 tensorflow>=2.0.0a
 sklearn
+plotly>=3.10.0
+google-cloud-storage>=1.16.1
