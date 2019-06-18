@@ -3,44 +3,13 @@ import plotly.offline as pyo
 import plotly.graph_objs as go
 import numpy as np
 import pandas as pd
-from glob import glob
-from os.path import join
 
 from trainer import constants as cst
 from trainer import data_pipeline as dp
 
+# TODO Feature values
 
-def plot_evaluation(base_dir, window_size, shift, stride, batch_size=16):
-    
-    # Find all saved_model directories in the base directory
-    saved_model_paths = glob(join(base_dir, "**", "saved_model"), recursive=True)
-    
-    # TODO Save in gcloud!
-    
-    # TODO
-    # Loop over all model paths
-    #   create dataset
-    #   load model
-    #   predict
-    #   get results dataframe
-    #   save plots to seperate evaluate directory with ion_age_2019... as HTML filename
-    
-    # TODO Feature values
-    
-    # dataset = dp.create_dataset(
-    #     data_dir=cst.TEST_SET,
-    #     window_size=window_size,
-    #     shift=shift,  # Can vary during validation
-    #     stride=stride,
-    #     batch_size=batch_size,  # Can vary during validation
-    #     cycle_length=1,  # To match original order (so no files get interleaved)
-    #     num_parallel_calls=1,  # Has to be equal or below cycle_length
-    #     shuffle=False,  # To match original order
-    #     repeat=False
-    # )    
-    # results = get_predictions_results(model, dataset)
 
-    
 def get_predictions_results(model, dataset):
     
     scaling_factors = dp.load_scaling_factors()
@@ -64,7 +33,7 @@ def get_predictions_results(model, dataset):
     return results
 
 
-def plot_predictions_and_errors(results_df, save_dir, auto_open=False):
+def plot_predictions_and_errors(results_df, auto_open=False):
     
     x_values = np.arange(len(results_df))
     
@@ -137,8 +106,5 @@ def plot_predictions_and_errors(results_df, save_dir, auto_open=False):
         yaxis4=dict(domain=[0, 0.2])
     )
     
-    pyo.plot(fig, filename=save_dir, auto_open=auto_open)
-
-
-if __name__ == "__main__":
-    plot_evaluation()
+    div = pyo.plot(fig, output_type='div', auto_open=auto_open)
+    return div
