@@ -198,8 +198,7 @@ def train_and_evaluate(args):
                                        ),
         CustomCheckpoints(log_dir=tboard_dir,
                           save_best_only=True,
-                          start_epoch=args.save_from,
-        )
+                          start_epoch=args.save_from)
         ]
 
     # train model
