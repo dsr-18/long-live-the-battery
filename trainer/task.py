@@ -42,7 +42,7 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
     
     period: Save model only for every n-th epoch.
     """
-    def __init__(self, log_dir, start_epoch, save_best_only=False, period=1):
+    def __init__(self, log_dir, start_epoch, dataset_path, dataset_config, save_best_only=False, period=1):
         self.log_dir = log_dir
         self.start_epoch = start_epoch
         self.save_best_only = save_best_only
@@ -224,7 +224,8 @@ def train_and_evaluate(args):
         CustomCheckpoints(log_dir=tboard_dir,
                           save_best_only=True,
                           start_epoch=args.save_from,
-        )
+                          dataset_path=ds_val_path,
+                          dataset_config=ds_config)
         ]
 
     # train model
