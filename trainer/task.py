@@ -2,6 +2,7 @@ import argparse
 import os
 from absl import logging
 import datetime
+import numpy as np
 
 import tensorflow as tf
 
@@ -10,6 +11,56 @@ import trainer.split_model as split_model
 import trainer.constants as cst
 
 
+class CustomCheckpoints(tf.keras.callbacks.Callback):
+    """
+    Custom callback function with ability to save the model to GCP.
+    The SavedModel contains:
+
+    1) a checkpoint containing the model weights. (variables/)
+    2) a SavedModel proto containing the Tensorflow backend 
+    graph. (saved_model.pb)
+    3) the model's json config. (assets/)
+
+    For big models too many checkpoints can blow up the size of the
+    log directory. To reduce the number of checkpoints, use the
+    parameters below.
+    
+    log_dir: The base directory of all log files. Checkpoints
+    will be saved in a "checkpoints" directory within this directory.
+    
+    start_epoch: The epoch after which checkpoints are saved.
+    
+    save_best_only: Only save a model if it has a lower validation loss
+    than all previously saved models.
+    
+    period: Save model only for every n-th epoch.
+    """
+    def __init__(self, log_dir, start_epoch, save_best_only=False, period=1):
+        self.log_dir = log_dir
+        self.start_epoch = start_epoch
+        self.save_best_only = save_best_only
+        self.period = period
+        
+    def on_train_begin(self, logs=None):
+        self.last_saved_epoch = None
+        self.lowest_loss = np.Inf
+        
+    def on_epoch_end(self, epoch, logs=None):
+        if (epoch % self.period == 0) and (epoch >= self.start_epoch):
+            self.current_loss = logs.get('val_loss')
+            self.checkpoint_dir = os.path.join(self.log_dir, "checkpoints", "epoch_{}_loss_{}".format(epoch, self.current_loss))
+            if self.save_best_only:
+                if self.current_loss < self.lowest_loss:
+                    tf.keras.experimental.export_saved_model(self.model, self.checkpoint_dir)
+                    self.lowest_loss = self.current_loss
+                    self.last_saved_epoch = epoch
+            else:
+                tf.keras.experimental.export_saved_model(self.model, self.checkpoint_dir)
+
+    def on_train_end(self, logs=None):
+        print("Last saved model is from epoch {}".format(self.last_saved_epoch))
+        
+        
 def get_args():
     """Argument parser.
 
@@ -80,11 +131,6 @@ def get_args():
         type=str,
         help='loss function used by the model, default=mean_squared_error')
     parser.add_argument(
-        '--optimizer',
-        default='adam',
-        type=str,
-        help='optimizer used by the model, default=adam')
-    parser.add_argument(
         '--shuffle',
         default=True,
         type=bool,
@@ -94,7 +140,13 @@ def get_args():
         '--shuffle-buffer',
         default=500,
         type=int,
-        help='Bigger buffer size means better shuffling but longer setup time.'
+        help='Bigger buffer size means better shuffling but longer setup time. Default=500'
+    )
+    parser.add_argument(
+        '--save-from',
+        default=80,
+        type=int,
+        help='epoch after which model checkpoints are saved, default=80'
     )
     args, _ = parser.parse_known_args()
     return args
@@ -132,8 +184,7 @@ def train_and_evaluate(args):
 
     # create model
     model = split_model.create_keras_model(window_size=args.window_size,
-                                           loss=args.loss,
-                                           optimizer=args.optimizer)
+                                           loss=args.loss)
 
     run_timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     if args.tboard_dir is None:
@@ -143,14 +194,12 @@ def train_and_evaluate(args):
 
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=tboard_dir,
-                                       write_graph=True,
                                        histogram_freq=0,
-                                       write_images=True),
-        # More callbacks for testing later
-        # tf.keras.callbacks.CSVLogger(os.path.join(args.tboard_dir, 'log.csv')),
-        # tf.keras.callbacks.ModelCheckpoint(os.path.join(args.tboard_dir, 'checkpoint_{epoch:02d}.h5'),
-        #                                    period=5,
-        #                                    save_best_only=True),
+                                       ),
+        CustomCheckpoints(log_dir=tboard_dir,
+                          save_best_only=True,
+                          start_epoch=args.save_from,
+        )
         ]
 
     # train model
@@ -163,11 +212,8 @@ def train_and_evaluate(args):
         verbose=1,
         callbacks=callbacks)
     
-    # export saved model
-    if args.saved_model_dir is None:
-        saved_model_dir = os.path.join(cst.SAVED_MODELS_DIR_LOCAL, run_timestr)
-    else:
-        saved_model_dir = args.saved_model_dir
+    # save model from last epoch
+    saved_model_dir = os.path.join(tboard_dir, "checkpoints", "last_epoch")
     tf.keras.experimental.export_saved_model(model, saved_model_dir)
 
 
