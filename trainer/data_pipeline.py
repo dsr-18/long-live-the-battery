@@ -252,12 +252,17 @@ def calculate_and_save_scaling_factors(data_dict, train_test_split, csv_dir):
     return scaling_factors
 
 
-def load_scaling_factors(csv_dir=cst.SCALING_FACTORS_DIR):
+def load_scaling_factors(csv_dir=cst.SCALING_FACTORS_DIR, gcloud_bucket=None):
     """Reads the scaling factors from a csv and returns them as a dict."""
-    with open(csv_dir, mode='r') as file:
-        csv_reader = csv.DictReader(file)
-        for row in csv_reader:
-            return {k: float(v) for k, v in row.items()}  # Return only the first found line with numeric values
+    if gcloud_bucket:
+        blob = gcloud_bucket.blob(csv_dir)
+        names, values = blob.download_as_string().decode("utf-8").split("\r\n")[:2]  # Download and decode byte string.
+        return {k: float(v) for k, v in zip(names.split(","), values.split(","))}
+    else:
+        with open(csv_dir, mode='r') as file:
+            csv_reader = csv.DictReader(file)
+            for row in csv_reader:
+                return {k: float(v) for k, v in row.items()}  # Return only the first found line with numeric values
 
 
 # dev method
