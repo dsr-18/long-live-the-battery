@@ -1,66 +1,16 @@
 import argparse
-import os
-from absl import logging
 import datetime
-import numpy as np
+import os
 
 import tensorflow as tf
+from absl import logging
 
+import trainer.constants as cst
 import trainer.data_pipeline as dp
 import trainer.split_model as split_model
-import trainer.constants as cst
+from trainer.callbacks import CustomCheckpoints
 
 
-class CustomCheckpoints(tf.keras.callbacks.Callback):
-    """
-    Custom callback function with ability to save the model to GCP.
-    The SavedModel contains:
-
-    1) a checkpoint containing the model weights. (variables/)
-    2) a SavedModel proto containing the Tensorflow backend 
-    graph. (saved_model.pb)
-    3) the model's json config. (assets/)
-
-    For big models too many checkpoints can blow up the size of the
-    log directory. To reduce the number of checkpoints, use the
-    parameters below.
-    
-    log_dir: The base directory of all log files. Checkpoints
-    will be saved in a "checkpoints" directory within this directory.
-    
-    start_epoch: The epoch after which checkpoints are saved.
-    
-    save_best_only: Only save a model if it has a lower validation loss
-    than all previously saved models.
-    
-    period: Save model only for every n-th epoch.
-    """
-    def __init__(self, log_dir, start_epoch, save_best_only=False, period=1):
-        self.log_dir = log_dir
-        self.start_epoch = start_epoch
-        self.save_best_only = save_best_only
-        self.period = period
-        
-    def on_train_begin(self, logs=None):
-        self.last_saved_epoch = None
-        self.lowest_loss = np.Inf
-        
-    def on_epoch_end(self, epoch, logs=None):
-        if (epoch % self.period == 0) and (epoch >= self.start_epoch):
-            self.current_loss = logs.get('val_loss')
-            self.checkpoint_dir = os.path.join(self.log_dir, "checkpoints", "epoch_{}_loss_{}".format(epoch, self.current_loss))
-            if self.save_best_only:
-                if self.current_loss < self.lowest_loss:
-                    tf.keras.experimental.export_saved_model(self.model, self.checkpoint_dir)
-                    self.lowest_loss = self.current_loss
-                    self.last_saved_epoch = epoch
-            else:
-                tf.keras.experimental.export_saved_model(self.model, self.checkpoint_dir)
-
-    def on_train_end(self, logs=None):
-        print("Last saved model is from epoch {}".format(self.last_saved_epoch))
-        
-        
 def get_args():
     """Argument parser.
 
@@ -162,28 +112,35 @@ def train_and_evaluate(args):
     Args:
     args: dictionary of arguments - see get_args() for details
     """
+    # Config datasets for consistent usage
+    ds_config = dict(window_size=args.window_size,
+                     shift=args.shift,
+                     stride=args.stride,
+                     batch_size=args.batch_size)
+    ds_train_path = args.data_dir_train
+    ds_val_path = args.data_dir_validate
 
-    # calculate steps_per_epoch_train, steps_per_epoch_test
-    steps_per_epoch_train = calculate_steps_per_epoch(args.data_dir_train, args.window_size, args.shift, args.stride, args.batch_size)
-    steps_per_epoch_validate = calculate_steps_per_epoch(args.data_dir_validate, args.window_size, args.shift, args.stride, args.batch_size)
+    # Calculate steps_per_epoch_train, steps_per_epoch_test
+    # This is needed, since for counting repeat has to be false
+    steps_per_epoch_train = calculate_steps_per_epoch(data_dir=ds_train_path, dataset_config=ds_config)
+    
+    steps_per_epoch_validate = calculate_steps_per_epoch(data_dir=ds_val_path, dataset_config=ds_config)
     
     # load datasets
-    dataset_train = dp.create_dataset(
-                        data_dir=args.data_dir_train,
-                        window_size=args.window_size,
-                        shift=args.shift,
-                        stride=args.stride,
-                        batch_size=args.batch_size)
-
-    dataset_validate = dp.create_dataset(
-                        data_dir=args.data_dir_validate,
-                        window_size=args.window_size,
-                        shift=args.shift,
-                        stride=args.stride,
-                        batch_size=args.batch_size)
+    dataset_train = dp.create_dataset(data_dir=ds_train_path,
+                                      window_size=ds_config["window_size"],
+                                      shift=ds_config["shift"],
+                                      stride=ds_config["stride"],
+                                      batch_size=ds_config["batch_size"])
+    
+    dataset_validate = dp.create_dataset(data_dir=ds_val_path,
+                                         window_size=ds_config["window_size"],
+                                         shift=ds_config["shift"],
+                                         stride=ds_config["stride"],
+                                         batch_size=ds_config["batch_size"])
 
     # create model
-    model = split_model.create_keras_model(window_size=args.window_size,
+    model = split_model.create_keras_model(window_size=ds_config["window_size"],
                                            loss=args.loss)
 
     run_timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -200,8 +157,9 @@ def train_and_evaluate(args):
         CustomCheckpoints(log_dir=tboard_dir,
                           save_best_only=True,
                           start_epoch=args.save_from,
-        )
-        ]
+                          dataset_path=ds_val_path,
+                          dataset_config=ds_config)
+    ]
 
     # train model
     model.fit(
@@ -212,20 +170,15 @@ def train_and_evaluate(args):
         validation_steps=steps_per_epoch_validate,
         verbose=1,
         callbacks=callbacks)
-    
-    # save model from last epoch
-    saved_model_dir = os.path.join(tboard_dir, "checkpoints", "last_epoch")
-    tf.keras.experimental.export_saved_model(model, saved_model_dir)
 
 
-def calculate_steps_per_epoch(data_dir, window_size, shift, stride, batch_size):
-    temp_dataset = dp.create_dataset(
-                        data_dir=data_dir,
-                        window_size=window_size,
-                        shift=shift,
-                        stride=stride,
-                        batch_size=batch_size,
-                        repeat=False)
+def calculate_steps_per_epoch(data_dir, dataset_config):
+    temp_dataset = dp.create_dataset(data_dir=data_dir,
+                                     window_size=dataset_config["window_size"],
+                                     shift=dataset_config["shift"],
+                                     stride=dataset_config["stride"],
+                                     batch_size=dataset_config["batch_size"],
+                                     repeat=False)
     steps_per_epoch = 0
     for batch in temp_dataset:
         steps_per_epoch += 1

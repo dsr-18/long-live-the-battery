@@ -96,6 +96,7 @@ def create_keras_model(window_size, loss, hparams_config=None):
         cst.LSTM_ACTIVATION: "sigmoid",
         cst.DENSE_NUM_UNITS: 32,
         cst.DENSE_ACTIVATION: "relu",
+        cst.OUTPUT_ACTIVATION: "relu",
     }
     # update hyperparameters with arguments from task_hyperparameter.py
     if hparams_config:
@@ -112,12 +113,23 @@ def create_keras_model(window_size, loss, hparams_config=None):
     detail_concat = concatenate([qdlin_in, tdlin_in], axis=3, name='detail_concat')
 
     # define CNN
-    cnn_out = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS], kernel_size=hparams[cst.CONV_KERNEL], activation=hparams[cst.CONV_ACTIVATION]), name='convolution')(detail_concat)
+    cnn_out = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS],
+                                     kernel_size=hparams[cst.CONV_KERNEL],
+                                     activation=hparams[cst.CONV_ACTIVATION],
+                                     padding='same'), name='convolution')(detail_concat)
     # Add some maxpools to reduce output size
     cnn_maxpool = TimeDistributed(MaxPooling1D(), name='conv_pool')(cnn_out)
-    cnn_out2 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS], kernel_size=hparams[cst.CONV_KERNEL], activation=hparams[cst.CONV_ACTIVATION]), name='conv2')(cnn_maxpool)
+    cnn_out2 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS],
+                                      kernel_size=hparams[cst.CONV_KERNEL],
+                                      activation=hparams[cst.CONV_ACTIVATION],
+                                      padding='same'), name='conv2')(cnn_maxpool)
     cnn_maxpool2 = TimeDistributed(MaxPooling1D(), name='pool2')(cnn_out2)
-    cnn_flat = TimeDistributed(Flatten(), name='convolution_flat')(cnn_maxpool2)
+    cnn_out3 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS],
+                                      kernel_size=hparams[cst.CONV_KERNEL],
+                                      activation=hparams[cst.CONV_ACTIVATION],
+                                      padding='same'), name='conv3')(cnn_maxpool2)
+    cnn_maxpool3 = TimeDistributed(MaxPooling1D(), name='pool3')(cnn_out3)
+    cnn_flat = TimeDistributed(Flatten(), name='convolution_flat')(cnn_maxpool3)
 
     # combine CNN output with all data from summary level
     all_concat = concatenate([cnn_flat, ir_in, dt_in, qd_in], axis=2, name='all_concat')
@@ -125,12 +137,13 @@ def create_keras_model(window_size, loss, hparams_config=None):
     # define LSTM
     lstm_out = LSTM(hparams[cst.LSTM_NUM_UNITS], activation=hparams[cst.LSTM_ACTIVATION], name='recurrent')(all_concat)
     hidden_dense = Dense(hparams[cst.DENSE_NUM_UNITS], name='hidden', activation=hparams[cst.DENSE_ACTIVATION])(lstm_out)
-    main_output = Dense(2, name='output')(hidden_dense)  # Try different activations that are not negative
+    # Relu activation on the last layer for striclty positive outputs
+    main_output = Dense(2, name='output', activation=hparams[cst.OUTPUT_ACTIVATION])(hidden_dense)
 
     model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])
     
     metrics_list = [mae_current_cycle, mae_remaining_cycles]
     
-    model.compile(loss=loss, optimizer=Adam(clipnorm=1.), metrics=metrics_list)  # Try lower learning rate
+    model.compile(loss=loss, optimizer=Adam(lr=0.0001, clipnorm=1.), metrics=metrics_list)
 
     return model
