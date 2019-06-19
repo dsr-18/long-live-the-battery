@@ -48,8 +48,10 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
         self.start_epoch = start_epoch
         self.save_best_only = save_best_only
         self.period = period
-        self.client = storage.Client()
-        self.bucket = self.client.get_bucket(cst.BUCKET_NAME)  # Only used for saving evaluation plots
+        self.cloud_run = cst.BUCKET_NAME in log_dir
+        if self.cloud_run:
+            self.client = storage.Client()
+            self.bucket = self.client.get_bucket(cst.BUCKET_NAME)  # Only used for saving evaluation plots
         self.validation_dataset = dp.create_dataset(data_dir=dataset_path,
                                                     window_size=dataset_config["window_size"],
                                                     shift=dataset_config["shift"],
@@ -92,7 +94,7 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
         plot_html = "<html><body>{}</body></html>".format(plot_div)
         
         # Save the html either in google cloud or locally
-        if cst.BUCKET_NAME in html_dir:
+        if self.cloud_run:
             blob = self.bucket.blob(html_dir)
             blob.upload_from_string(plot_html, content_type="text/html")
         else:
