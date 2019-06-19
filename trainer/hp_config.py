@@ -19,4 +19,5 @@ split_model_hparams = [
    hp.HParam(cst.LSTM_ACTIVATION, hp.Discrete(['sigmoid', 'tanh'])),
    # hp.HParam(cst.DENSE_NUM_UNITS, hp.Discrete([32, 64])),
    # hp.HParam(cst.DENSE_ACTIVATION, hp.Discrete(['relu', 'sigmoid']))
+   # hp.HParam(cst.OUTPUT_ACTIVATION, hp.Discrete(['relu']))
    ]
