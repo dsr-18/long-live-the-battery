@@ -88,8 +88,13 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
     def _save_evaluation_plot(self, model, checkpoint_dir, dataset, file_name='validation_plot.html'):
         html_dir = os.path.join(checkpoint_dir, file_name)
         
+        if self.cloud_run:
+            scaling_factors = dp.load_scaling_factors(gcloud_bucket=self.bucket)
+        else:
+            scaling_factors = dp.load_scaling_factors()
+            
         # Make a forward pass over the whole validation dataset and get the results as a dataframe
-        val_results = ev.get_predictions_results(model, dataset)
+        val_results = ev.get_predictions_results(model, dataset, scaling_factors)
         
         # Plot the resutls with plotly and wrap the resulting <div> as a html string
         plot_div = ev.plot_predictions_and_errors(val_results)
@@ -97,7 +102,8 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
         
         # Save the html either in google cloud or locally
         if self.cloud_run:
-            blob = self.bucket.blob(html_dir)
+            # Splitting path and only taking the tail, because self.bucket already knows about the bucket location
+            blob = self.bucket.blob(html_dir.split(cst.BUCKET_NAME + "/")[-1])
             blob.upload_from_string(plot_html, content_type="text/html")
         else:
             with open(html_dir, 'w') as f:
@@ -233,7 +239,7 @@ def train_and_evaluate(args):
                                          batch_size=ds_config["batch_size"])
 
     # create model
-    model = split_model.create_keras_model(window_size=args.window_size,
+    model = split_model.create_keras_model(window_size=ds_config["window_size"],
                                            loss=args.loss)
 
     run_timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
