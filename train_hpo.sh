@@ -6,7 +6,7 @@ BUCKET='ion_age_bucket'
 REGION='europe-west1'
 
 PACKAGE_PATH='trainer/'
-MODULE_NAME='trainer.task'
+MODULE_NAME='trainer.task_hpo'
 CONFIG_FILE='config.yaml'
 
 JOB_DIR="gs://${BUCKET}"
@@ -20,7 +20,7 @@ TFRECORDS_DIR_TRAIN="gs://${BUCKET}/data/tfrecords/train/*tfrecord"
 TFRECORDS_DIR_VALIDATE="gs://${BUCKET}/data/tfrecords/test/*tfrecord"
 
 # put TensorBoard logs, saved models in individual run dirs
-JOB_RUN_DIR="${PACKAGE_STAGING_PATH}/jobs/${JOB_NAME}"
+JOB_RUN_DIR="${PACKAGE_STAGING_PATH}/gridsearches/${JOB_NAME}"
 
 
 # parse command-line args

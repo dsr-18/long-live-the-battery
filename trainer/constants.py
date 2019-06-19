@@ -27,3 +27,13 @@ SECONDARY_TEST_SET = join(DATASETS_DIR, "secondary_test", "*tfrecord")  # regexp
 SCALING_FACTORS_DIR = join(DATASETS_DIR, "scaling_factors.csv")  # location for scaling factors for tfrecords files
 
 BUCKET_NAME = 'ion_age_bucket'
+
+# Hyperparameter names
+CONV_KERNEL = 'conv_kernel'
+CONV_FILTERS = 'conv_filters'
+CONV_ACTIVATION = 'conv_activation'
+LSTM_NUM_UNITS = 'lstm_num_units'
+LSTM_ACTIVATION = 'lstm_activation'
+DENSE_NUM_UNITS = 'dense_num_units'
+DENSE_ACTIVATION = 'dense_activation'
+OUTPUT_ACTIVATION = 'output_activation'

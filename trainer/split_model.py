@@ -71,12 +71,37 @@ def log_acc_ratio_loss(y_true, y_pred):
     return tf.math.reduce_mean(log_acc_ratio)
 
 
-def create_keras_model(window_size, loss):
+def create_keras_model(window_size, loss, hparams_config=None):
     """Creates the Keras model.
-
-    Args:
-    window_size: [...]
+    
+    Arguments
+    window_size: Number of samples per row. Must match window_size 
+    of the datasets that are used to fit/predict.
+    
+    loss: Loss function of the model.
+    
+    hparams_config: A dictionary of hyperparameters that can be used
+    to test multiple configurations (hpo). Default is the 
+    'hparams' dictionary that is defined at the beginning of this
+    function. This dictionary is used for standard non-hpo jobs
+    and for any parameter that is not defined in a hpo job.
     """
+    
+    # Default configuration
+    hparams = {
+        cst.CONV_FILTERS: 16,
+        cst.CONV_KERNEL: 5,
+        cst.CONV_ACTIVATION: "relu",
+        cst.LSTM_NUM_UNITS: 65,
+        cst.LSTM_ACTIVATION: "sigmoid",
+        cst.DENSE_NUM_UNITS: 32,
+        cst.DENSE_ACTIVATION: "relu",
+        cst.OUTPUT_ACTIVATION: "relu",
+    }
+    # update hyperparameters with arguments from task_hyperparameter.py
+    if hparams_config:
+        hparams.update(hparams_config)
+
     # define Inputs
     qdlin_in = Input(shape=(window_size, cst.STEPS, cst.INPUT_DIM), name=cst.QDLIN_NAME)
     tdlin_in = Input(shape=(window_size, cst.STEPS, cst.INPUT_DIM), name=cst.TDLIN_NAME)
@@ -88,20 +113,20 @@ def create_keras_model(window_size, loss):
     detail_concat = concatenate([qdlin_in, tdlin_in], axis=3, name='detail_concat')
 
     # define CNN
-    cnn_out = TimeDistributed(Conv1D(filters=16,
-                                     kernel_size=3,
-                                     activation='relu',
+    cnn_out = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS],
+                                     kernel_size=hparams[cst.CONV_KERNEL],
+                                     activation=hparams[cst.CONV_ACTIVATION],
                                      padding='same'), name='convolution')(detail_concat)
     # Add some maxpools to reduce output size
     cnn_maxpool = TimeDistributed(MaxPooling1D(), name='conv_pool')(cnn_out)
-    cnn_out2 = TimeDistributed(Conv1D(filters=16,
-                                      kernel_size=3,
-                                      activation='relu',
+    cnn_out2 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS],
+                                      kernel_size=hparams[cst.CONV_KERNEL],
+                                      activation=hparams[cst.CONV_ACTIVATION],
                                       padding='same'), name='conv2')(cnn_maxpool)
     cnn_maxpool2 = TimeDistributed(MaxPooling1D(), name='pool2')(cnn_out2)
-    cnn_out3 = TimeDistributed(Conv1D(filters=16,
-                                      kernel_size=3,
-                                      activation='relu',
+    cnn_out3 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS],
+                                      kernel_size=hparams[cst.CONV_KERNEL],
+                                      activation=hparams[cst.CONV_ACTIVATION],
                                       padding='same'), name='conv3')(cnn_maxpool2)
     cnn_maxpool3 = TimeDistributed(MaxPooling1D(), name='pool3')(cnn_out3)
     cnn_flat = TimeDistributed(Flatten(), name='convolution_flat')(cnn_maxpool3)
@@ -110,10 +135,10 @@ def create_keras_model(window_size, loss):
     all_concat = concatenate([cnn_flat, ir_in, dt_in, qd_in], axis=2, name='all_concat')
 
     # define LSTM
-    lstm_out = LSTM(128, activation='tanh', name='recurrent')(all_concat)
-    hidden_dense = Dense(64, name='hidden', activation='relu')(lstm_out)
+    lstm_out = LSTM(hparams[cst.LSTM_NUM_UNITS], activation=hparams[cst.LSTM_ACTIVATION], name='recurrent')(all_concat)
+    hidden_dense = Dense(hparams[cst.DENSE_NUM_UNITS], name='hidden', activation=hparams[cst.DENSE_ACTIVATION])(lstm_out)
     # Relu activation on the last layer for striclty positive outputs
-    main_output = Dense(2, name='output', activation='relu')(hidden_dense)
+    main_output = Dense(2, name='output', activation=hparams[cst.OUTPUT_ACTIVATION])(hidden_dense)
 
     model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])
     
