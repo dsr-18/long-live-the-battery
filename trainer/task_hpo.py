@@ -12,6 +12,7 @@ import trainer.split_model as split_model
 import trainer.constants as cst
 import trainer.task as task
 from trainer.hp_config import split_model_hparams
+from trainer.callbacks import CustomCheckpoints
     
     
 def train_and_evaluate(hparams, run_dir):
@@ -40,6 +41,11 @@ def train_and_evaluate(hparams, run_dir):
     
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=run_dir, histogram_freq=0, write_graph=False),
+        CustomCheckpoints(log_dir=run_dir,
+                          save_last_only=True,
+                          start_epoch=args.save_from,
+                          dataset_path=ds_val_path,
+                          dataset_config=ds_config)
     ]
     
     history = model.fit(
@@ -51,10 +57,6 @@ def train_and_evaluate(hparams, run_dir):
         verbose=1,
         callbacks=callbacks,
     )    
-
-    # save model from last epoch
-    saved_model_dir = os.path.join(run_dir, "last_epoch_checkpoint")
-    tf.keras.experimental.export_saved_model(model, saved_model_dir)
     
     mae_current = min(history.history["val_mae_current_cycle"])
     mae_remaining = min(history.history["val_mae_remaining_cycles"])
