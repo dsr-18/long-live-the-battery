@@ -81,7 +81,8 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
                 self._save_evaluation_plot(self.model, self.checkpoint_dir, self.validation_dataset)
 
     def on_train_end(self, logs=None):
-        print("Last saved model is from epoch {}".format(self.last_saved_epoch))
+        tf.keras.experimental.export_saved_model(self.model, self.checkpoint_dir)
+        self._save_evaluation_plot(self.model, self.checkpoint_dir, self.validation_dataset)
         
     def _save_evaluation_plot(self, model, checkpoint_dir, dataset, file_name='validation_plot.html'):
         html_dir = os.path.join(checkpoint_dir, file_name)
@@ -260,10 +261,6 @@ def train_and_evaluate(args):
         validation_steps=steps_per_epoch_validate,
         verbose=1,
         callbacks=callbacks)
-    
-    # save model from last epoch
-    saved_model_dir = os.path.join(tboard_dir, "checkpoints", "last_epoch")
-    tf.keras.experimental.export_saved_model(model, saved_model_dir)
 
 
 def calculate_steps_per_epoch(data_dir, dataset_config):
