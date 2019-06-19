@@ -1,7 +1,5 @@
 import itertools
-import argparse
 import os
-from absl import logging
 import datetime
 
 import tensorflow as tf
@@ -15,29 +13,37 @@ from trainer.hp_config import split_model_hparams
 from trainer.callbacks import CustomCheckpoints
     
     
-def train_and_evaluate(hparams, run_dir):
+def train_and_evaluate(hparams, run_dir, args):
     model = split_model.create_keras_model(window_size=args.window_size,
-                               loss=args.loss,
-                               hparams_config=hparams)
+                                           loss=args.loss,
+                                           hparams_config=hparams)
     
-    # calculate steps_per_epoch_train, steps_per_epoch_test
-    steps_per_epoch_train = task.calculate_steps_per_epoch(args.data_dir_train, args.window_size, args.shift, args.stride, args.batch_size)
-    steps_per_epoch_validate = task.calculate_steps_per_epoch(args.data_dir_validate, args.window_size, args.shift, args.stride, args.batch_size)
+    # Config datasets for consistent usage
+    ds_config = dict(window_size=args.window_size,
+                     shift=args.shift,
+                     stride=args.stride,
+                     batch_size=args.batch_size)
+    ds_train_path = args.data_dir_train
+    ds_val_path = args.data_dir_validate
+
+    # Calculate steps_per_epoch_train, steps_per_epoch_test
+    # This is needed, since for counting repeat has to be false
+    steps_per_epoch_train = task.calculate_steps_per_epoch(data_dir=ds_train_path, dataset_config=ds_config)
+    
+    steps_per_epoch_validate = task.calculate_steps_per_epoch(data_dir=ds_val_path, dataset_config=ds_config)
     
     # load datasets
-    dataset_train = dp.create_dataset(
-                        data_dir=args.data_dir_train,
-                        window_size=args.window_size,
-                        shift=args.shift,
-                        stride=args.stride,
-                        batch_size=args.batch_size)
-
-    dataset_validate = dp.create_dataset(
-                        data_dir=args.data_dir_validate,
-                        window_size=args.window_size,
-                        shift=args.shift,
-                        stride=args.stride,
-                        batch_size=args.batch_size)
+    dataset_train = dp.create_dataset(data_dir=ds_train_path,
+                                      window_size=ds_config["window_size"],
+                                      shift=ds_config["shift"],
+                                      stride=ds_config["stride"],
+                                      batch_size=ds_config["batch_size"])
+    
+    dataset_validate = dp.create_dataset(data_dir=ds_val_path,
+                                         window_size=ds_config["window_size"],
+                                         shift=ds_config["shift"],
+                                         stride=ds_config["stride"],
+                                         batch_size=ds_config["batch_size"])
     
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=run_dir, histogram_freq=0, write_graph=False),
@@ -63,10 +69,10 @@ def train_and_evaluate(hparams, run_dir):
     return mae_current, mae_remaining
 
 
-def run(run_dir, hparams):
+def run(run_dir, hparams, args):
     with tf.summary.create_file_writer(run_dir).as_default():
         hp.hparams(hparams)
-        mae_current, mae_remaining = train_and_evaluate(hparams, run_dir)
+        mae_current, mae_remaining = train_and_evaluate(hparams, run_dir, args)
         tf.summary.scalar('current_mae', mae_current, step=1)
         tf.summary.scalar('remaining_mae', mae_remaining, step=1)
         
@@ -93,7 +99,7 @@ def grid_search(args):
         run_name = "run-{}_{}".format(session_num, run_timestr)
         print('--- Starting trial: {}'.format(run_name))
         print({h: hparams[h] for h in hparams})
-        run(os.path.join(tboard_dir, run_name), hparams)
+        run(os.path.join(tboard_dir, run_name), hparams, args)
         session_num += 1
             
             

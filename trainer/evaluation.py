@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 
 from trainer import constants as cst
-from trainer import data_pipeline as dp
 
 # TODO Feature values
 
