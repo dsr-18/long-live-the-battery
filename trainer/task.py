@@ -67,8 +67,8 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
         self.lowest_loss = np.Inf
         
     def on_epoch_end(self, epoch, logs=None):
+        self.current_loss = logs.get('val_loss')
         if (epoch % self.period == 0) and (epoch >= self.start_epoch):
-            self.current_loss = logs.get('val_loss')
             self.checkpoint_dir = os.path.join(self.log_dir, "checkpoints", "epoch_{}_loss_{}".format(epoch, self.current_loss))
             if self.save_best_only:
                 if self.current_loss < self.lowest_loss:
@@ -81,8 +81,9 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
                 self._save_evaluation_plot(self.model, self.checkpoint_dir, self.validation_dataset)
 
     def on_train_end(self, logs=None):
-        tf.keras.experimental.export_saved_model(self.model, self.checkpoint_dir)
-        self._save_evaluation_plot(self.model, self.checkpoint_dir, self.validation_dataset)
+        last_epoch_dir = os.path.join(self.log_dir, "checkpoints", "last_epoch_loss_{}".format(self.current_loss))
+        tf.keras.experimental.export_saved_model(self.model, last_epoch_dir)
+        self._save_evaluation_plot(self.model, last_epoch_dir, self.validation_dataset)
         
     def _save_evaluation_plot(self, model, checkpoint_dir, dataset, file_name='validation_plot.html'):
         html_dir = os.path.join(checkpoint_dir, file_name)
