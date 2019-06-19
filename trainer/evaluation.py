@@ -10,9 +10,8 @@ from trainer import data_pipeline as dp
 # TODO Feature values
 
 
-def get_predictions_results(model, dataset):
-    
-    scaling_factors = dp.load_scaling_factors()
+def get_predictions_results(model, dataset, scaling_factors_dict):
+
     predictions = []
     targets = []
     
@@ -20,9 +19,14 @@ def get_predictions_results(model, dataset):
         predictions.extend(model.predict(example).tolist())
         targets.extend(target.numpy().tolist())
     
-    # Scale to original range and round for floating point errors of conversion.
-    predictions = np.round(np.array(predictions) * scaling_factors[cst.REMAINING_CYCLES_NAME]).astype(np.int)
-    targets = np.round(np.array(targets) * scaling_factors[cst.REMAINING_CYCLES_NAME]).astype(np.int)
+    if scaling_factors_dict:
+        # Scale to original range and round for floating point errors of conversion.
+        predictions = np.round(np.array(predictions) * scaling_factors_dict[cst.REMAINING_CYCLES_NAME]).astype(np.int)
+        targets = np.round(np.array(targets) * scaling_factors_dict[cst.REMAINING_CYCLES_NAME]).astype(np.int)
+    else:
+        predictions = np.array(predictions)
+        targets = np.array(targets)
+        
     results = pd.DataFrame({
         "pred_current_cycle": predictions[:, 0],
         "pred_remaining_cycles": predictions[:, 1],
