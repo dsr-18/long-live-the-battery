@@ -92,11 +92,12 @@ def create_keras_model(window_size, loss, hparams_config=None):
         cst.CONV_FILTERS: 16,
         cst.CONV_KERNEL: 5,
         cst.CONV_ACTIVATION: "relu",
-        cst.LSTM_NUM_UNITS: 65,
-        cst.LSTM_ACTIVATION: "sigmoid",
-        cst.DENSE_NUM_UNITS: 32,
+        cst.LSTM_NUM_UNITS: 64,
+        cst.LSTM_ACTIVATION: "tanh",
+        cst.DENSE_NUM_UNITS: 64,
         cst.DENSE_ACTIVATION: "relu",
         cst.OUTPUT_ACTIVATION: "relu",
+        cst.LEARNING_RATE: 0.0001,
     }
     # update hyperparameters with arguments from task_hyperparameter.py
     if hparams_config:
@@ -144,6 +145,6 @@ def create_keras_model(window_size, loss, hparams_config=None):
     
     metrics_list = [mae_current_cycle, mae_remaining_cycles]
     
-    model.compile(loss=loss, optimizer=Adam(lr=0.0001, clipnorm=1.), metrics=metrics_list)
+    model.compile(loss=loss, optimizer=Adam(lr=hparams[cst.LEARNING_RATE], clipnorm=1.), metrics=metrics_list)
 
     return model
