@@ -25,6 +25,7 @@ TRAIN_SET = join(DATASETS_DIR, "train", "*tfrecord")  # regexp files for the tra
 TEST_SET = join(DATASETS_DIR, "test", "*tfrecord")  # regexp for the test set
 SECONDARY_TEST_SET = join(DATASETS_DIR, "secondary_test", "*tfrecord")  # regexp for the secondary test set
 SCALING_FACTORS_DIR = join(DATASETS_DIR, "scaling_factors.csv")  # location for scaling factors for tfrecords files
+DATA_DIR = "data"
 
 BUCKET_NAME = 'ion_age_bucket'
 
