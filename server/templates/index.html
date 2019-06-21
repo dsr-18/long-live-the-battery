@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+        <div class="container h-100">
+            <div class="row h-100 justify-content-center align-items-center">
+                <div class="col-9 center-block">
+                    
+
+                    <h2>Battery Cycle Life Prediction</h2>
+                    <form action="{{ url_for ('predict') }}" method="POST" enctype="multipart/form-data">
+                        <div class="input-group">
+                            <label class="input-group-btn">
+                                <span class="btn btn-primary">
+                                    Browse&hellip; <input type="file" name="myjson" style="display: none;">
+                                </span>
+                            </label>
+                            <input type="text" class="form-control" readonly>
+                        </div>
+                        <small id="InptData" class="form-text text-muted">Upload your battery data in a json-formatted file</small>
+                        <br>
+                        <button type="submit" id="myButton" class="btn btn-primary">Upload</button>
+                    </form>
+
+                    <!-- Alternative standard file-input form -->
+                    <!-- <h2>Battery Cycle Life Prediction</h2>
+                    <form action="{{ url_for ('predict') }}" method="POST" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <input name="myjson" type="file" class="form-control-file border" id="InputData">
+                            <small id="InputData" class="form-text text-muted">Upload your battery data in a json-formatted file</small>
+                        </div>
+                        <button type="submit" id="myButton" class="btn btn-primary">Upload</button>
+                    </form> -->
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+{% endblock %}
+
+
