@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import pickle
 from os.path import join
+import re
 
 from scipy.stats import skew, kurtosis
 from sklearn.linear_model import LinearRegression
@@ -16,9 +17,13 @@ def build_windowed_feature_df(preprocessed_pkl, window_size=20, shift=20):
 
     for cell_k, cell_v in preprocessed_pkl.items():
         print('processing', cell_k)
+
+        cell_k_pattern = re.split('c', cell_k)
+        cell_batch = int(cell_k_pattern[0].split('b')[1])
+        cell_num = int(cell_k_pattern[1])
+
         cell_cycles = cell_v['cycles']
         cell_summary = cell_v['summary']
-        total_cycles = len(cell_cycles)
 
         # slice cycle keys into windows
         cycle_keys = list(cell_cycles.keys())
@@ -29,19 +34,24 @@ def build_windowed_feature_df(preprocessed_pkl, window_size=20, shift=20):
                 window_cycle_keys.append(cycle_keys_slice)
         
         # init value arrays
+        total_cycles = len(cell_cycles)
         num_windows = len(window_cycle_keys)
         assert num_windows == int((total_cycles-window_size) // shift) + 1
         print('num_windows', num_windows, 'total_cycles', total_cycles)
         minimum_dQ_window = np.zeros(num_windows)
         variance_dQ_window = np.zeros(num_windows)
+        skewness_dQ_window = np.zeros(num_windows)
+        kurtosis_dQ_window = np.zeros(num_windows)
         slope_lin_fit_window = np.zeros(num_windows)
         intercept_lin_fit_window = np.zeros(num_windows)
-        discharge_capacity_2 = np.zeros(num_windows)
+        discharge_capacity_1 = np.zeros(num_windows)
+        diff_discharge_capacity_max_1 = np.zeros(num_windows)
         mean_discharge_time = np.zeros(num_windows)
         minimum_IR_window = np.zeros(num_windows)
         diff_IR_window = np.zeros(num_windows)
         target_remaining = np.zeros(num_windows)
         target_current = np.zeros(num_windows)
+        target_classifier = np.zeros(num_windows)
     
         # build cell-level df
         for i, window_keys in enumerate(window_cycle_keys):
@@ -56,6 +66,8 @@ def build_windowed_feature_df(preprocessed_pkl, window_size=20, shift=20):
             dQ_window = cell_cycles[key_clast]['Qdlin'] - cell_cycles[key_c1]['Qdlin']
             minimum_dQ_window[i] = np.log(np.abs(np.min(dQ_window)))
             variance_dQ_window[i] = np.log(np.var(dQ_window))
+            skewness_dQ_window[i] = np.log(np.abs(skew(dQ_window)))
+            kurtosis_dQ_window[i] = np.log(np.abs(kurtosis(dQ_window)))
 
             # 2. Discharge capacity fade curve features
             # Compute linear fit for cycles 2 to last:
@@ -68,7 +80,8 @@ def build_windowed_feature_df(preprocessed_pkl, window_size=20, shift=20):
             linear_regressor_window.fit(X, q)
             slope_lin_fit_window[i] = linear_regressor_window.coef_[0]
             intercept_lin_fit_window[i] = linear_regressor_window.intercept_
-            discharge_capacity_2[i] = q[0][0]
+            discharge_capacity_1[i] = q[0][0]
+            diff_discharge_capacity_max_1[i] = np.max(q) - q[0][0]
 
             # 3. Other features
             mean_discharge_time[i] = np.mean(cell_summary['Discharge_time'][summary_key_c1:summary_key_clast+1])
@@ -78,21 +91,29 @@ def build_windowed_feature_df(preprocessed_pkl, window_size=20, shift=20):
             # 4. Targets
             target_remaining[i] = cell_summary['Remaining_cycles'][summary_key_clast]
             target_current[i] = int(key_clast)
+            target_classifier[i] = cell_v['cycle_life'] >= 550
+
             
         # assemble cell-level df
         cell_dfs.append(
             pd.DataFrame({
-                "cell_key": np.array(cell_k, dtype=str),
-                "minimum_dQ_100_10": minimum_dQ_window,
+                "cell_key": np.array(cell_k),
+                "cell_batch": np.array(cell_batch),
+                "cell_num": np.array(cell_num),
+                "minimum_dQ_window": minimum_dQ_window,
                 "variance_dQ_window": variance_dQ_window,
+                "skewness_dQ_window": skewness_dQ_window,
+                "kurtosis_dQ_window": kurtosis_dQ_window,
                 "slope_lin_fit_window": slope_lin_fit_window,
                 "intercept_lin_fit_window": intercept_lin_fit_window,
-                "discharge_capacity_2": discharge_capacity_2,
+                "discharge_capacity_1": discharge_capacity_1,
+                "diff_discharge_capacity_max_1": diff_discharge_capacity_max_1,
                 "mean_discharge_time": mean_discharge_time,
                 "minimum_IR_window": minimum_IR_window,
                 "diff_IR_window": diff_IR_window,
-                "target_remaining": np.array(target_remaining, dtype=np.int32),
-                "target_current": np.array(target_current, dtype=np.int32)
+                "target_remaining": target_remaining,
+                "target_current": target_current,
+                "target_classifier": target_classifier
             }))
     
     return pd.concat(cell_dfs)
