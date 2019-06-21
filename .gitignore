@@ -23,3 +23,6 @@ env/
 
 # saved model on server
 server/saved_model/
+
+# dockerfile
+dockerfile

@@ -5,9 +5,10 @@ import numpy as np
 import plotly
 import plotly.graph_objs as go
 import tensorflow as tf
-from flask import render_template, request
+from flask import Flask, render_template, request
 
-from server import app
+
+app = Flask(__name__)
 
 def load_model():
     global model  # bc YOLO
@@ -69,6 +70,8 @@ def predict():
             json_data = request.get_json()
             return make_prediction(json_data, res)
         
-print('--> Loading Keras Model and starting server')
-model = None
-load_model()
+if __name__ == "__main__":
+    print('--> Loading Keras Model and starting server')
+    model = None
+    load_model()        
+    app.run(host="0.0.0.0")
