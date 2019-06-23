@@ -1,5 +1,8 @@
 # long-live-the-battery
-Predicting total battery cycle life time with machine learning
+Predicting total battery cycle life time with machine learning [...]
+
+This project is based on the work done by this paper: https://www.nature.com/articles/s41560-019-0356-8 , and uses the corresponding data set.  The original instructions for how to load the data can be found here:  https://github.com/rdbraatz/data-driven-prediction-of-battery-cycle-life-before-capacity-degradation .
+
 
 ## Install
 Use the following commands to install dependencies for this project:
