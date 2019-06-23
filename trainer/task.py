@@ -102,7 +102,7 @@ def get_args():
     return args
 
 
-def train_and_evaluate(args):
+def train_and_evaluate(args, tboard_dir, hparams=None):
     """Trains and evaluates the Keras model.
 
     Uses the Keras model defined in model.py and trains on data loaded and
@@ -120,6 +120,11 @@ def train_and_evaluate(args):
     ds_train_path = args.data_dir_train
     ds_val_path = args.data_dir_validate
 
+    # create model
+    model = split_model.create_keras_model(window_size=ds_config["window_size"],
+                                           loss=args.loss,
+                                           hparams_config=hparams)
+    
     # Calculate steps_per_epoch_train, steps_per_epoch_test
     # This is needed, since for counting repeat has to be false
     steps_per_epoch_train = calculate_steps_per_epoch(data_dir=ds_train_path, dataset_config=ds_config)
@@ -138,31 +143,29 @@ def train_and_evaluate(args):
                                          shift=ds_config["shift"],
                                          stride=ds_config["stride"],
                                          batch_size=ds_config["batch_size"])
-
-    # create model
-    model = split_model.create_keras_model(window_size=ds_config["window_size"],
-                                           loss=args.loss)
-
-    run_timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    if args.tboard_dir is None:
-        tboard_dir = os.path.join(cst.TENSORBOARD_DIR, "jobs", run_timestr)
+    
+    # if hparams is passed, we're running a HPO-job
+    if hparams:
+        checkpoint_callback = CustomCheckpoints(save_last_only=True,
+                                                log_dir=tboard_dir,
+                                                dataset_path=ds_val_path,
+                                                dataset_config=ds_config)
     else:
-        tboard_dir = args.tboard_dir
-
+        checkpoint_callback = CustomCheckpoints(save_best_only=True,
+                                                start_epoch=args.save_from,
+                                                log_dir=tboard_dir,
+                                                dataset_path=ds_val_path,
+                                                dataset_config=ds_config)
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=tboard_dir,
                                        histogram_freq=0,
                                        write_graph=False,
                                        ),
-        CustomCheckpoints(log_dir=tboard_dir,
-                          save_best_only=True,
-                          start_epoch=args.save_from,
-                          dataset_path=ds_val_path,
-                          dataset_config=ds_config)
+        checkpoint_callback,
     ]
 
     # train model
-    model.fit(
+    history = model.fit(
         dataset_train, 
         epochs=args.num_epochs,
         steps_per_epoch=steps_per_epoch_train,
@@ -170,6 +173,11 @@ def train_and_evaluate(args):
         validation_steps=steps_per_epoch_validate,
         verbose=1,
         callbacks=callbacks)
+    
+    mae_current = min(history.history["val_mae_current_cycle"])
+    mae_remaining = min(history.history["val_mae_remaining_cycles"])
+    return mae_current, mae_remaining
+
 
 
 def calculate_steps_per_epoch(data_dir, dataset_config):
@@ -185,7 +193,16 @@ def calculate_steps_per_epoch(data_dir, dataset_config):
     return steps_per_epoch
 
 
+def get_tboard_dir():
+    run_timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    if args.tboard_dir is None:
+        tboard_dir = os.path.join(cst.TENSORBOARD_DIR, "jobs", run_timestr)
+    else:
+        tboard_dir = args.tboard_dir
+    return tboard_dir
+
+
 if __name__ == '__main__':
     args = get_args()
     logging.set_verbosity(args.verbosity)
-    train_and_evaluate(args)
+    train_and_evaluate(args, get_tboard_dir())
