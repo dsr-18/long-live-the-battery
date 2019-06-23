@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 def load_model():
     global model  # bc YOLO
-    model_dir = "saved_model/"      # TODO replace with Docker env dir
+    model_dir = "saved_model/"
     model = tf.keras.experimental.load_from_saved_model(model_dir)
 
 
@@ -51,7 +51,7 @@ def index():
     return render_template("index.html", title="Home")
 
 
-@app.route('/predict', methods=['GET', 'POST'])
+@app.route('/predict', methods=['POST'])
 def predict():
     res = { 'success': False }
 
@@ -59,7 +59,7 @@ def predict():
         # read payload json
         if len(request.files) > 0:
             print("Upload via form")
-            parsed_data = request.files["myjson"].read().decode('utf8')
+            parsed_data = request.files["jsonInput"].read().decode('utf8')
             json_data = json.loads(parsed_data)
             predictions_response = make_prediction(json_data, res)
             predictions = json.loads(predictions_response.json["predictions"])

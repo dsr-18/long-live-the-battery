@@ -16,3 +16,13 @@ $(function() {
 });
   
   
+$(document).ready(function() {
+    $('#uploadButton').on('click', function() {
+      var $this = $(this);
+      var loadingText = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
+      if ($(this).html() !== loadingText) {
+        $this.data('original-text', $(this).html());
+        $this.html(loadingText);
+      }
+    });
+  })
