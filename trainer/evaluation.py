@@ -161,6 +161,19 @@ def plot_single_prediction(prediction,
                            height=600,
                            width=1000,
                            inline=False):
+    """Visualizes a single model prediction and gives context by comparing it to the mean_cylce_life.
+    A synthetic capacity curve is only created for better interpretability and is not based on data!
+    
+    Arguments:
+        prediction {numpy.ndarray} -- Model output like [0.134567, 0.456787]
+        
+        window_size {int} -- window_size of the model
+        
+        scaling_factors_dict {dict} -- Feature scaling factors used during training of the model.
+            This is used to make the model output interpretable as a cycle number.
+            
+        mean_cycle_life {int} -- Cycle life to compare the model prediction to.
+    """
     relative_results = prediction / prediction.sum()  # Relative to this cell
     results_cycle_life = np.sum(np.round(
         prediction * scaling_factors_dict[cst.REMAINING_CYCLES_NAME]).astype(np.int))
