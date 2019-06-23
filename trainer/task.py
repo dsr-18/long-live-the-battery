@@ -102,7 +102,7 @@ def get_args():
     return args
 
 
-def train_and_evaluate(args, tboard_dir, hparams):
+def train_and_evaluate(args, tboard_dir, hparams=None):
     """Trains and evaluates the Keras model.
 
     Uses the Keras model defined in model.py and trains on data loaded and
@@ -143,19 +143,19 @@ def train_and_evaluate(args, tboard_dir, hparams):
                                          shift=ds_config["shift"],
                                          stride=ds_config["stride"],
                                          batch_size=ds_config["batch_size"])
-
+    
+    # if hparams is passed, we're running a HPO-job
     if hparams:
-        checkpoint_callback = CustomCheckpoints(save_best_only=True,
-                                                log_dir=tboard_dir,
-                                                start_epoch=args.save_from,
-                                                dataset_path=ds_val_path,
-                                                dataset_config=ds_config)
-    else:
         checkpoint_callback = CustomCheckpoints(save_last_only=True,
                                                 log_dir=tboard_dir,
                                                 dataset_path=ds_val_path,
                                                 dataset_config=ds_config)
-        
+    else:
+        checkpoint_callback = CustomCheckpoints(save_best_only=True,
+                                                start_epoch=args.save_from,
+                                                log_dir=tboard_dir,
+                                                dataset_path=ds_val_path,
+                                                dataset_config=ds_config)
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=tboard_dir,
                                        histogram_freq=0,
@@ -205,4 +205,4 @@ def get_tboard_dir():
 if __name__ == '__main__':
     args = get_args()
     logging.set_verbosity(args.verbosity)
-    train_and_evaluate(args, get_tboard_dir(), hparams=None)
+    train_and_evaluate(args, get_tboard_dir())
