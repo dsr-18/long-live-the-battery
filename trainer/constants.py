@@ -15,16 +15,17 @@ REMAINING_CYCLES_NAME = 'Remaining_cycles'
 CURRENT_CYCLE_NAME = 'Current_cycle'
 
 # File paths
-TRAIN_TEST_SPLIT = "train_test_split.pkl"  # file location for train/test split definition
-PROCESSED_DATA = join("data", "processed_data.pkl")  # file location for processed data
-DATASETS_DIR = join("data", "tfrecords")  # base directory to write tfrecord files in
-TENSORBOARD_DIR = "Graph"  # base directory to write tensorboard logs in
-SAVED_MODELS_DIR_LOCAL = "saved_models"  # base directory to save trained model in
-BASE_DIR = "./"  # home directory
-TRAIN_SET = join(DATASETS_DIR, "train", "*tfrecord")  # regexp files for the training set
-TEST_SET = join(DATASETS_DIR, "test", "*tfrecord")  # regexp for the test set
-SECONDARY_TEST_SET = join(DATASETS_DIR, "secondary_test", "*tfrecord")  # regexp for the secondary test set
-SCALING_FACTORS_DIR = join(DATASETS_DIR, "scaling_factors.csv")  # location for scaling factors for tfrecords files
+TRAIN_TEST_SPLIT = 'train_test_split.pkl'  # file location for train/test split definition
+PROCESSED_DATA = join('data', 'processed_data.pkl')  # file location for processed data
+DATASETS_DIR = join('data', 'tfrecords')  # base directory to write tfrecord files in
+TENSORBOARD_DIR = 'Graph'  # base directory to write tensorboard logs in
+SAVED_MODELS_DIR_LOCAL = 'saved_models'  # base directory to save trained model in
+BASE_DIR = './'  # home directory
+TRAIN_SET = join(DATASETS_DIR, 'train', '*tfrecord')  # regexp files for the training set
+TEST_SET = join(DATASETS_DIR, 'test', '*tfrecord')  # regexp for the test set
+SECONDARY_TEST_SET = join(DATASETS_DIR, 'secondary_test', '*tfrecord')  # regexp for the secondary test set
+SCALING_FACTORS_DIR = join(DATASETS_DIR, 'scaling_factors.csv')  # location for scaling factors for tfrecords files
+DATA_DIR = 'data'
 
 BUCKET_NAME = 'ion_age_bucket'
 
@@ -32,6 +33,7 @@ BUCKET_NAME = 'ion_age_bucket'
 CONV_KERNEL = 'conv_kernel'
 CONV_FILTERS = 'conv_filters'
 CONV_ACTIVATION = 'conv_activation'
+CONV_STRIDE = 'conv_stride'
 LSTM_NUM_UNITS = 'lstm_num_units'
 LSTM_ACTIVATION = 'lstm_activation'
 DENSE_NUM_UNITS = 'dense_num_units'

@@ -90,14 +90,15 @@ def create_keras_model(window_size, loss, hparams_config=None):
     # Default configuration
     hparams = {
         cst.CONV_FILTERS: 16,
-        cst.CONV_KERNEL: 5,
+        cst.CONV_KERNEL: 13,
+        cst.CONV_STRIDE: 3,
         cst.CONV_ACTIVATION: "relu",
-        cst.LSTM_NUM_UNITS: 64,
+        cst.LSTM_NUM_UNITS: 128,
         cst.LSTM_ACTIVATION: "tanh",
-        cst.DENSE_NUM_UNITS: 64,
+        cst.DENSE_NUM_UNITS: 32,
         cst.DENSE_ACTIVATION: "relu",
         cst.OUTPUT_ACTIVATION: "relu",
-        cst.LEARNING_RATE: 0.0001,
+        cst.LEARNING_RATE: 0.001,
     }
     # update hyperparameters with arguments from task_hyperparameter.py
     if hparams_config:
@@ -116,17 +117,20 @@ def create_keras_model(window_size, loss, hparams_config=None):
     # define CNN
     cnn_out = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS],
                                      kernel_size=hparams[cst.CONV_KERNEL],
+                                     strides=hparams[cst.CONV_STRIDE],
                                      activation=hparams[cst.CONV_ACTIVATION],
                                      padding='same'), name='convolution')(detail_concat)
     # Add some maxpools to reduce output size
     cnn_maxpool = TimeDistributed(MaxPooling1D(), name='conv_pool')(cnn_out)
-    cnn_out2 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS],
+    cnn_out2 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS]*2,
                                       kernel_size=hparams[cst.CONV_KERNEL],
+                                      strides=hparams[cst.CONV_STRIDE],
                                       activation=hparams[cst.CONV_ACTIVATION],
                                       padding='same'), name='conv2')(cnn_maxpool)
     cnn_maxpool2 = TimeDistributed(MaxPooling1D(), name='pool2')(cnn_out2)
-    cnn_out3 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS],
+    cnn_out3 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS]*4,
                                       kernel_size=hparams[cst.CONV_KERNEL],
+                                      strides=hparams[cst.CONV_STRIDE],
                                       activation=hparams[cst.CONV_ACTIVATION],
                                       padding='same'), name='conv3')(cnn_maxpool2)
     cnn_maxpool3 = TimeDistributed(MaxPooling1D(), name='pool3')(cnn_out3)
