@@ -36,7 +36,13 @@ def get_predictions_results(model, dataset, scaling_factors_dict):
     return results
 
 
-def plot_predictions_and_errors(results_df, auto_open=False):
+def plot_predictions_and_errors(results_df, height=1300, width=4000, return_div=True):
+    """Plots predictions vs. target and the corresponding absolute errors
+    for current and remaining cycles.
+    
+    if return_div == False, a normal plotly plot is created and opended in a new tab.
+    Otherwise the returned <div> element may be used for wrapping the plot in html. 
+    """
     
     x_values = np.arange(len(results_df))
     
@@ -101,16 +107,19 @@ def plot_predictions_and_errors(results_df, auto_open=False):
     fig.append_trace(ae_remaining_cycles_trace, 4, 1)
     
     fig['layout'].update(
-        height=1300,
-        width=4000,
+        height=height,
+        width=width,
         yaxis=dict(domain=[0.7, 1]),
         yaxis2=dict(domain=[0.5, 0.7]),
         yaxis3=dict(domain=[0.2, 0.5]),
         yaxis4=dict(domain=[0, 0.2])
     )
     
-    div = pyo.plot(fig, output_type='div', auto_open=auto_open)
-    return div
+    if return_div:
+        div = pyo.plot(fig, output_type='div')
+        return div
+    else:
+        pyo.plot(fig)
 
 
 def skewed_normalized_sigmoid(x):  
