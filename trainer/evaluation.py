@@ -26,14 +26,41 @@ def get_predictions_results(model, dataset, scaling_factors_dict):
         predictions = np.array(predictions)
         targets = np.array(targets)
         
-    results = pd.DataFrame({
+    results_df = pd.DataFrame({
         "pred_current_cycle": predictions[:, 0],
         "pred_remaining_cycles": predictions[:, 1],
         "target_current_cycle": targets[:, 0],
         "target_remaining_cycles": targets[:, 1],
     })
     
-    return results
+    return results_df
+
+
+def create_cell_index(results_df, cell_index_col_name="cell_index", inplace=False):
+    """Takes a results datafram from get_predictions_results and adds a new column
+    with an integer index for every entry which belongs to the same cell.
+    
+    The indexes do not correspond to the actual indexes in the original data!
+    """
+    # Initialization
+    if inplace:
+        results = results_df
+    else:
+        results = results_df.copy()
+    results[cell_index_col_name] = 0
+    
+    # Getting the border indexes for all cells
+    new_cell_index = list(results[results["target_current_cycle"].diff() < 0].index)
+    new_cell_index.append(len(results))  # Add the last index manually, since there is no diff < 0
+    last_s = 0  # Set first starting index manually
+    
+    # Setting cell_indexes
+    for i, s in enumerate(new_cell_index):
+        results[cell_index_col_name].iloc[last_s:s] = i
+        last_s = s
+    
+    if not inplace:
+        return results
 
 
 def plot_predictions_and_errors(results_df, height=1300, width=4000, return_div=True):
