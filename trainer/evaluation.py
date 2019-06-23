@@ -295,3 +295,163 @@ def plot_single_prediction(prediction,
         pyo.iplot(fig)
     else:
         pyo.plot(fig)
+
+
+def get_binned_cycle_count_trace(results_df, window_size, cycle_bin_width=100, column="target_current_cycle"):
+    """Creates a plotly line trace with the value counts of results_df[column] which is used
+    in plot_errors_and_counts.
+    
+    window_size is needed for correct binning of the valuecounts."""
+    
+    # Get the current cycle value counts sorted from low to high
+    current_cycle_counts = (results_df[column]
+                            .value_counts()
+                            .sort_index()
+                            .reset_index()
+                            .rename(columns={"index": "current_cycle_value",
+                                             column: "count"}))
+
+    # The actual cycle counts can be {20: 42,  21: 2,  25: 42,  26: 2} since some cycles were dropped
+    # Binning aggregates these "outliers" with bin size equal to shift
+    bins = list(range(window_size, results_df[column].max(), cycle_bin_width))
+    bins.append(results_df[column].max())
+    grouped_cycle_counts = (current_cycle_counts
+                            .groupby(pd.cut(current_cycle_counts["current_cycle_value"], bins=bins))
+                            .sum()
+                            .loc[:, "count"])
+    
+    # Convert to percent, since the absolute counts can vary widely, when cycle_bin_width changes
+    grouped_cycle_counts = ((grouped_cycle_counts - grouped_cycle_counts.min())
+                            / (grouped_cycle_counts.max() - grouped_cycle_counts.min()))
+
+    return go.Scatter(x=np.array(bins) - window_size,  # shift necessary to line up with error traces
+                      y=grouped_cycle_counts,
+                      name="Cells count")
+
+
+def get_errors_over_cycle_traces(results_df, cycle_bin_width=100):
+    """Creates a plotly bar trace with the mean absolute errors for current and remaining cycles
+    aggregated in bins of "target_current_cycle".
+    This shows the different levels of errors of the model during different cycle ranges.  
+    
+    This trace is used in plot_errors_and_counts.
+    """
+    results = results_df.copy()
+
+    # Calculate absolute errors
+    results["ae_current_cycle"] = (results["target_current_cycle"] - results["pred_current_cycle"]).abs()
+    results["ae_remaining_cycles"] = (results["target_remaining_cycles"] - results["pred_remaining_cycles"]).abs()
+    
+    # Create bin intervalls
+    bins = list(range(0, results["target_current_cycle"].max(), cycle_bin_width))
+    bins.append(results["target_current_cycle"].max())
+    
+    # Aggregate mean absolute errors over bins and save as new dataframe
+    mae_binned = (results.groupby(pd.cut(results_df["target_current_cycle"], bins=bins))
+                  .mean()
+                  .loc[:, ["ae_current_cycle", "ae_remaining_cycles"]])
+    
+    std_binned = (results.groupby(pd.cut(results_df["target_current_cycle"], bins=bins))
+                  .std()
+                  .loc[:, ["ae_current_cycle", "ae_remaining_cycles"]])
+    
+    # Build mean absolute errors over bins
+    mae_current_cycle_trace = go.Bar(
+        x=bins,
+        y=mae_binned["ae_current_cycle"],
+        name="mae_current_cycle"
+    )
+    mae_remaining_cycles_trace = go.Bar(
+        x=bins,
+        y=mae_binned["ae_remaining_cycles"],
+        name="mae_remaining_cycles"
+    )
+    
+    # Build standard deviation of absolute errors over bins
+    std_current_cycle_trace = go.Bar(
+        x=bins,
+        y=std_binned["ae_current_cycle"],
+        name="std_current_cycle"
+    )
+    std_remaining_cycles_trace = go.Bar(
+        x=bins,
+        y=std_binned["ae_remaining_cycles"],
+        name="std_remaining_cycles"
+    )
+
+    return (mae_current_cycle_trace,
+            mae_remaining_cycles_trace,
+            std_current_cycle_trace,
+            std_remaining_cycles_trace)
+
+
+def plot_errors_and_counts(results_df,
+                           window_size,
+                           height=800,
+                           width=1000,
+                           cycle_bin_width=100,
+                           show_count=True,
+                           inline=False):
+    """Plots the traces from get_errors_over_cycle_traces and get_binned_cycle_count_trace side by side.
+    If show_count == False, then only the errors will be plotted in a single graph (height and width stay the same).
+    """
+    mae_cc, mae_rc, _, _ = get_errors_over_cycle_traces(results_df, cycle_bin_width)
+        
+    if show_count:
+        count_trace = get_binned_cycle_count_trace(results_df, window_size, cycle_bin_width)
+        count_trace.update(dict(
+            # mode= 'none',
+            line=dict(color="rgba(210, 210, 210, 1.0)"),
+            fill='tozeroy',
+            fillcolor="rgba(210, 210, 210, 0.5)",
+            yaxis="y2",
+        ))
+    
+    # # (WIP) If ticks for errors and cell percentage should line up.
+    # dtick_error = 100
+    # max_error = max(mae_cc.y.max(), mae_rc.y.max())
+    # tickvals_error = list(range(0, int(max_error), dtick_error))
+    # print(max(tickvals_error) / max_error)
+
+    layout = dict(
+        height=height,
+        width=width,
+        xaxis=dict(
+            title="Cycle",
+            titlefont=dict(family='Arial', size=24),
+            tickfont=dict(family='Arial', size=18)
+        ),
+        yaxis=dict(
+            title="Mean absolute error",
+            # overlaying="y2",
+            # tickmode="array",
+            # tickvals=tickvals_error,
+            dtick=200,
+            titlefont=dict(family='Arial', size=24),
+            tickfont=dict(family='Arial', size=18),
+        ),
+        yaxis2=dict(
+            title="Cell count",
+            tickformat='%',
+            # side="right",
+            tickmode="array",
+            titlefont=dict(family='Arial', size=24),
+            tickfont=dict(family='Arial', size=18),
+        )
+    )
+    
+    if show_count:
+        fig = tools.make_subplots(rows=2, shared_xaxes=True)
+        fig.append_trace(mae_cc, 1, 1)
+        fig.append_trace(mae_rc, 1, 1)
+        fig.append_trace(count_trace, 2, 1)
+        layout["yaxis"].update(dict(domain=[0.4, 1.0]))
+        layout["yaxis2"].update(dict(domain=[0.0, 0.3]))
+        fig["layout"].update(layout)
+    else:
+        fig = go.Figure(data=[mae_cc, mae_rc], layout=layout)
+
+    if inline:
+        pyo.iplot(fig)
+    else:
+        pyo.plot(fig)
