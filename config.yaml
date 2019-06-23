@@ -1,6 +1,6 @@
 trainingInput:
   scaleTier: CUSTOM
-  masterType: standard_gpu
+  masterType: complex_model_m_gpu
   # for GPU, replace line above with:
   # masterType: standard_gpu
   # CPU model: large_model
