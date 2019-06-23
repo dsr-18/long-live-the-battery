@@ -12,9 +12,6 @@ __pycache__/
 .idea
 .vscode/*
 
-# ignore temp files from plotly
-*.html
-
 # local TensorBoard dir
 Graph/
 
@@ -23,3 +20,6 @@ saved_models/
 
 # virtual environments
 env/
+
+# saved model on server
+server/saved_model/

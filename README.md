@@ -39,4 +39,13 @@ To run the model in Google Cloud Platform (Team Members Only):
 ```
 ./train.sh
 ```
-  .  Follow output URL to stream logs.
+Follow output URL to stream logs.
+
+
+## Predict
+Every run should save at least one checkpoint automatically. Local runs save checkpoints in the "Graph" directory. To start a local server that serves predictions, copy any "saved_model" in "Graph" to the "server" directory. Then go into the server directory and start the server from there:
+```
+cd server
+python server.py
+```
+Now visit "localhost:5000" in your browser and you should see the start page with a prompt to upload battery data. You can download a sample data file here: LINK

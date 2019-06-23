@@ -1,0 +1,4 @@
+flask
+numpy
+plotly
+tensorflow==2.0.0-beta1
