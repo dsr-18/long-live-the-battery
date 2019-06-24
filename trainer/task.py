@@ -166,7 +166,7 @@ def train_and_evaluate(args, tboard_dir, hparams=None):
         steps_per_epoch=steps_per_epoch_train,
         validation_data=dataset_validate,
         validation_steps=steps_per_epoch_validate,
-        verbose=1,
+        verbose=2,
         callbacks=callbacks)
     
     mae_current = min(history.history["val_mae_current_cycle"])
