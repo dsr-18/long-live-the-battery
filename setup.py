@@ -7,7 +7,7 @@ REQUIRED_PACKAGES = ['numpy>=1.16',
 					 'scipy>=1.2.1',
                      'plotly>=3.10.0',
                      'google-cloud-storage>=1.16.1',
-					 'tensorflow-gpu>=2.0.0a']
+					 'tensorflow-gpu>=2.0.0-beta']
 					 # for GPU, replace line above with:  
 					 # 'tensorflow-gpu>=2.0.0a']
 

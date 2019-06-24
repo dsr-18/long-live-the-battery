@@ -67,11 +67,6 @@ def get_args():
         type=int,
         help='stride inside sliding window in training sample generation, default=1')
     parser.add_argument(
-        '--learning-rate',
-        default=.01,      # NOT USED RIGHT NOW
-        type=float,
-        help='learning rate for gradient descent, default=.01')
-    parser.add_argument(
         '--verbosity',
         choices=['DEBUG', 'ERROR', 'FATAL', 'INFO', 'WARN'],
         default='DEBUG')
@@ -177,7 +172,6 @@ def train_and_evaluate(args, tboard_dir, hparams=None):
     mae_current = min(history.history["val_mae_current_cycle"])
     mae_remaining = min(history.history["val_mae_remaining_cycles"])
     return mae_current, mae_remaining
-
 
 
 def calculate_steps_per_epoch(data_dir, dataset_config):

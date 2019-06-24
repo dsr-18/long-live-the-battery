@@ -18,4 +18,6 @@ split_model_hparams = [
    # hp.HParam(cst.DENSE_NUM_UNITS, hp.Discrete([32])),
    # hp.HParam(cst.OUTPUT_ACTIVATION, hp.Discrete(['relu', 'sigmoid'])),
    # hp.HParam(cst.LEARNING_RATE, hp.Discrete([0.0001, 0.00001, 0.000005])),
+   # hp.HParam(cst.DROPOUT_RATE_CNN, hp.Discrete([0.3, 0.4])),
+   # hp.HParam(cst.DROPOUT_RATE_LSTM, hp.Discrete([0.3, 0.4])),
    ]
