@@ -89,8 +89,8 @@ def create_keras_model(window_size, loss, hparams_config=None):
     
     # Default configuration
     hparams = {
-        cst.CONV_FILTERS: 16,
-        cst.CONV_KERNEL: 13,
+        cst.CONV_FILTERS: 8,
+        cst.CONV_KERNEL: 9,
         cst.CONV_ACTIVATION: "relu",
         cst.LSTM_NUM_UNITS: 128,
         cst.LSTM_ACTIVATION: 'tanh',
