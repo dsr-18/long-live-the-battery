@@ -16,17 +16,21 @@
                             </label>
                             <input type="text" class="form-control" readonly>
                         </div>
-                        <small id="InptData" class="form-text text-muted">Upload your battery data in a json-formatted file</small>
+                        <small class="form-text text-muted">Upload your battery data in a json-formatted file</small>
                         <br>
-                        <button type="submit" class="btn btn-primary" id="uploadButton">Predict</button>
+                        <button type="submit" class="btn btn-primary" id="uploadButton" disabled>Predict</button>
                     </form>
-
                 </div>
             </div>
         </div>
         <div id="previewContainer"></div>
-
+        
+        <footer class="fixed-bottom font-small blue">
+            <div class="footer-copyright text-center py-3">Don't have any battery data lying around?
+            <a href="{{ url_for ('example') }}">Try our sample data.</a>
+            </div>                
+        </footer>
+        <script src="static/js/index.js"></script> 
 
 {% endblock %}
-
 

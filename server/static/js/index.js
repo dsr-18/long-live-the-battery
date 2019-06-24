@@ -12,39 +12,37 @@ $(function() {
         reader.onload = function(e) {
           console.log(typeof reader.result);
           annotationsObject = JSON.parse(reader.result);
-          //process example with qdlin
+          //process example
           preview_data = {}
           for (var key in annotationsObject){
             preview_data[key] = eval(annotationsObject[key])
           };    
           $('#previewButton').prop("disabled", false);  
-           
+          $('#uploadButton').prop("disabled", false);  
         };
         reader.readAsText(this.files[0]);
       }
     });
   
-  $(document).ready( function() {
-    // change label of text to name of uploaded file
-    $(':file').on('fileselect', function(event, label) {  
-        var input = $(this).parents('.input-group').find(':text');  
-        input.val(label);
-    });
-    // Loading spinner
-    $('#uploadButton').on('click', function() {
-      var $this = $(this);
-      var loadingText = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
-      if ($(this).html() !== loadingText) {
-        $this.data('original-text', $(this).html());
-        $this.html(loadingText);
-      }
-    });
+  // change label of text to name of uploaded file
+  $(':file').on('fileselect', function(event, label) {  
+      var input = $(this).parents('.input-group').find(':text');  
+      input.val(label);
+  });
+  // Loading spinner
+  $('#uploadButton').on('click', function() {
+    var $this = $(this);
+    var loadingText = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
+    if ($(this).html() !== loadingText) {
+      $this.data('original-text', $(this).html());
+      $this.html(loadingText);
+    }
+  });
+  // trigger preview plot and scrolling
+  $('#previewButton').on('click', function() {
+      preview_plot(preview_data);
+  });
 
-    $('#previewButton').on('click', function() {
-        preview_plot(preview_data);
-    });
-
-  });  
 })
 
 

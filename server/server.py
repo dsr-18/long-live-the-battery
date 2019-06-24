@@ -1,5 +1,7 @@
 import json
-
+from random import randint
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 import flask
 import numpy as np
 import plotly
@@ -75,7 +77,21 @@ def predict():
             print("Upload via curl")
             json_data = request.get_json()
             return make_prediction(json_data, res)
-        
+
+
+@app.route('/example')
+def example():
+    if request.args:
+        rand = randint(1,5)
+        filename = "sample_input_{}.json".format(rand)
+        with open("static/samples/{}".format(filename), "r") as json_file:
+            json_data = json.load(json_file)
+    else:
+        filename = ""
+        json_data = None
+    return render_template("example.html", title="Samples", filename=filename, data=json_data)
+
+    
 if __name__ == "__main__":
     print('--> Loading Keras Model and starting server')
     model = None
