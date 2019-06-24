@@ -1,6 +1,6 @@
 import trainer.constants as cst
 
-from tensorflow.keras.layers import concatenate, LSTM, Conv1D, Flatten, TimeDistributed, Input, Dense, MaxPooling1D
+from tensorflow.keras.layers import concatenate, LSTM, Conv1D, Flatten, TimeDistributed, Input, Dense, MaxPooling1D, Dropout
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 import tensorflow.keras.backend as K
@@ -99,6 +99,8 @@ def create_keras_model(window_size, loss, hparams_config=None):
         cst.DENSE_ACTIVATION: "relu",
         cst.OUTPUT_ACTIVATION: "relu",
         cst.LEARNING_RATE: 0.001,
+        cst.DROPOUT_RATE_CNN: 0.3,
+        cst.DROPOUT_RATE_LSTM: 0.3,
     }
     # update hyperparameters with arguments from task_hyperparameter.py
     if hparams_config:
@@ -122,26 +124,28 @@ def create_keras_model(window_size, loss, hparams_config=None):
                                      padding='same'), name='convolution')(detail_concat)
     # Add some maxpools to reduce output size
     cnn_maxpool = TimeDistributed(MaxPooling1D(), name='conv_pool')(cnn_out)
-    cnn_out2 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS]*2,
+    cnn_out2 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS] * 2,
                                       kernel_size=hparams[cst.CONV_KERNEL],
                                       strides=hparams[cst.CONV_STRIDE],
                                       activation=hparams[cst.CONV_ACTIVATION],
                                       padding='same'), name='conv2')(cnn_maxpool)
     cnn_maxpool2 = TimeDistributed(MaxPooling1D(), name='pool2')(cnn_out2)
-    cnn_out3 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS]*4,
+    cnn_out3 = TimeDistributed(Conv1D(filters=hparams[cst.CONV_FILTERS] * 4,
                                       kernel_size=hparams[cst.CONV_KERNEL],
                                       strides=hparams[cst.CONV_STRIDE],
                                       activation=hparams[cst.CONV_ACTIVATION],
                                       padding='same'), name='conv3')(cnn_maxpool2)
     cnn_maxpool3 = TimeDistributed(MaxPooling1D(), name='pool3')(cnn_out3)
     cnn_flat = TimeDistributed(Flatten(), name='convolution_flat')(cnn_maxpool3)
+    drop_out = TimeDistributed(Dropout(rate=hparams[cst.DROPOUT_RATE_CNN]), name='dropout_cnn')(cnn_flat)
 
     # combine CNN output with all data from summary level
-    all_concat = concatenate([cnn_flat, ir_in, dt_in, qd_in], axis=2, name='all_concat')
+    all_concat = concatenate([drop_out, ir_in, dt_in, qd_in], axis=2, name='all_concat')
 
     # define LSTM
     lstm_out = LSTM(hparams[cst.LSTM_NUM_UNITS], activation=hparams[cst.LSTM_ACTIVATION], name='recurrent')(all_concat)
-    hidden_dense = Dense(hparams[cst.DENSE_NUM_UNITS], name='hidden', activation=hparams[cst.DENSE_ACTIVATION])(lstm_out)
+    drop_out_2 = Dropout(rate=hparams[cst.DROPOUT_RATE_LSTM], name='dropout_lstm')(lstm_out)
+    hidden_dense = Dense(hparams[cst.DENSE_NUM_UNITS], name='hidden', activation=hparams[cst.DENSE_ACTIVATION])(drop_out_2)
     # Relu activation on the last layer for striclty positive outputs
     main_output = Dense(2, name='output', activation=hparams[cst.OUTPUT_ACTIVATION])(hidden_dense)
 

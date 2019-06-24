@@ -179,7 +179,6 @@ def train_and_evaluate(args, tboard_dir, hparams=None):
     return mae_current, mae_remaining
 
 
-
 def calculate_steps_per_epoch(data_dir, dataset_config):
     temp_dataset = dp.create_dataset(data_dir=data_dir,
                                      window_size=dataset_config["window_size"],
