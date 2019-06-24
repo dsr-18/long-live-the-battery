@@ -61,12 +61,13 @@ function preview_plot(json_data) {
                 name: 'Tdlin', };
   var data = [ qdlin, tdlin ];
   var layout = {
+    plot_bgcolor: 'rgb(250, 250, 250)',
     grid: {rows: 2, columns: 1, pattern: 'independent'},
   };
   $('#previewContainer').append('<div class="container h-100">\
-  <div class="row h-100 justify-content-center align-items-center">\
-  <div class="col-9 center-block"><div id="preview">\
-  </div></div></div></div>');
+    <div class="row h-100 justify-content-center align-items-center">\
+    <div class="col-9 center-block"><div id="preview">\
+    </div></div></div></div>');
   Plotly.newPlot('preview', data, layout);
   $('#preview').prepend("<h2>Your Uploaded Data</h2>");
   var ir = parseFloat(json_data['IR'][0][0]).toFixed(2);

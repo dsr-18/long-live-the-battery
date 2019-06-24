@@ -6,6 +6,7 @@ import plotly
 import plotly.graph_objs as go
 import tensorflow as tf
 from flask import Flask, render_template, request
+from plot import plot_single_prediction
 
 
 app = Flask(__name__)
@@ -38,11 +39,16 @@ def make_prediction(cycle_data, response):
 
 def make_plot(predictions):
     predictions = np.array(predictions)
-    x = np.sort(predictions[:,0])
-    y = predictions[:,1]
-    data = [go.Scatter(x=x, y=y)]
-    graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
-    return graphJSON
+    first_pred = predictions[0]
+    window_size = model.input_shape[0][1]
+    scaling_factors_dict = {"Remaining_cycles": 2159.0}
+    mean_cycle_life = 674
+    figure = plot_single_prediction(first_pred,
+                                  window_size,
+                                  scaling_factors_dict,
+                                  mean_cycle_life)
+    gaphJSON = json.dumps(figure, cls=plotly.utils.PlotlyJSONEncoder)
+    return gaphJSON
 
 
 @app.route('/')
@@ -64,7 +70,7 @@ def predict():
             predictions_response = make_prediction(json_data, res)
             predictions = json.loads(predictions_response.json["predictions"])
             plot = make_plot(predictions)
-            return render_template("results.html", title="Results", prediction=predictions, plot=plot)
+            return render_template("results.html", title="Results", plot=plot)
         else:
             print("Upload via curl")
             json_data = request.get_json()
