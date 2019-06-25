@@ -20,8 +20,7 @@
                     </form>
                     <br>
                     <form action="{{ url_for ('predict') }}" method="POST">
-                        <input type="file" id="dataStorage" name="jsonInput" style="display: none;" data-json="{{ data }}" value="{{ data }}">
-                        <!-- <input type="file" id="dataStorage" style="display: none;" data-json="{{ data }}" value="{{ data }}"> -->
+                        <input type="text" id="dataStorage" name="jsonInput" style="display: none;" value="{{ data }}">
                         <button type="submit" class="btn btn-primary" id="uploadButton" disabled>Predict</button>
                     </form>
                 </div>

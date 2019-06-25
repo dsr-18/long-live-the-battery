@@ -59,44 +59,34 @@ def index():
     return render_template("index.html", title="Home")
 
 
-# @app.route('/predict', methods=['POST'])
-# def predict():
-#     res = { 'success': False }
-#     if flask.request.method == 'POST':
-#         # read payload json
-#         if len(request.files) > 0:
-#             print("Upload via form")
-#             parsed_data = request.files["jsonInput"].read().decode('utf8')
-#             json_data = json.loads(parsed_data)
-#             predictions_response = make_prediction(json_data, res)
-#             predictions = json.loads(predictions_response.json["predictions"])
-#             plot = make_plot(predictions)
-#             return render_template("results.html", title="Results", plot=plot)
-#         else:
-#             print("Upload via curl")
-#             json_data = request.get_json()
-#             return make_prediction(json_data, res)
-
 @app.route('/predict', methods=['POST'])
 def predict():
     res = { 'success': False }
-    print(request)
-    print(request.files)
+
     if flask.request.method == 'POST':
         # read payload json
         if len(request.files) > 0:
+            print("Form upload")
             parsed_data = request.files["jsonInput"].read().decode('utf8')
             json_data = json.loads(parsed_data)
             predictions_response = make_prediction(json_data, res)
             predictions = json.loads(predictions_response.json["predictions"])
             plot = make_plot(predictions)
             return render_template("results.html", title="Results", plot=plot)
-        else:
+        elif request.get_json() is not None:
             print("Upload via curl")
-            print(request.Form)
-            print()
             json_data = request.get_json()
             return make_prediction
+        else:
+            print("Example upload")
+            parsed_data = request.form["jsonInput"]
+            json_data = parsed_data.replace("'", '"')
+            json_data = json.loads(json_data)
+            predictions_response = make_prediction(json_data, res)
+            predictions = json.loads(predictions_response.json["predictions"])
+            plot = make_plot(predictions)
+            return render_template("results.html", title="Results", plot=plot)
+
 
 @app.route('/example')
 def example():

@@ -1,9 +1,9 @@
 $(function() {
-  var json_data = $('#dataStorage').data();
-  if (json_data["json"] !== "None") {
+  var json_data = $('#dataStorage').val();
+  if (json_data !== "None") {
     $('#previewButton').prop("disabled", false);  
     $('#uploadButton').prop("disabled", false);  
-    json_data = json_data["json"].replace(/'/g, '"');
+    json_data = json_data.replace(/'/g, '"');
     json_data = JSON.parse(json_data);
   };
 
@@ -15,9 +15,15 @@ $(function() {
     preview_plot(preview_data);
   });
 
-//   $('#uploadButton').on('click', function() {
-//     $.post("")
-
+  // Loading spinner
+  $('#uploadButton').on('click', function() {
+    var $this = $(this);
+    var loadingText = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
+    if ($(this).html() !== loadingText) {
+      $this.data('original-text', $(this).html());
+      $this.html(loadingText);
+    }
+  });
 });
 
 function preview_plot(json_data) {
@@ -53,7 +59,7 @@ function preview_plot(json_data) {
       scrollTop: 0
     }, 800);
     return false;
-  }));   
+  }));
   document.querySelector('#preview').scrollIntoView({
     behavior: 'smooth',
     alignTo: true,
