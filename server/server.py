@@ -1,7 +1,6 @@
 import json
 from random import randint
-import os
-os.environ["CUDA_VISIBLE_DEVICES"]="-1"
+
 import flask
 import numpy as np
 import plotly
@@ -41,10 +40,12 @@ def make_prediction(cycle_data, response):
 
 def make_plot(predictions):
     predictions = np.array(predictions)
+    # The prediction endpoint can handle batches of battery data per request,
+    # but for now we visualize only the first data example.
     first_pred = predictions[0]
     window_size = model.input_shape[0][1]
     scaling_factors_dict = {"Remaining_cycles": 2159.0}
-    mean_cycle_life = 674
+    mean_cycle_life = 674  # calculated from training set
     figure = plot_single_prediction(first_pred,
                                   window_size,
                                   scaling_factors_dict,
@@ -66,36 +67,37 @@ def predict():
     if flask.request.method == 'POST':
         # read payload json
         if len(request.files) > 0:
-            print("Form upload")
+            print("form upload")
             parsed_data = request.files["jsonInput"].read().decode('utf8')
-            json_data = json.loads(parsed_data)
-            predictions_response = make_prediction(json_data, res)
-            predictions = json.loads(predictions_response.json["predictions"])
-            plot = make_plot(predictions)
-            return render_template("results.html", title="Results", plot=plot)
-        elif request.get_json() is not None:
-            print("Upload via curl")
+        elif request.get_json() is None:
+            print("example upload")
+            parsed_data = request.form["jsonInput"]
+            parsed_data = parsed_data.replace("'", '"')
+        else:
+            print("curl upload")
             json_data = request.get_json()
             return make_prediction
-        else:
-            print("Example upload")
-            parsed_data = request.form["jsonInput"]
-            json_data = parsed_data.replace("'", '"')
-            json_data = json.loads(json_data)
-            predictions_response = make_prediction(json_data, res)
-            predictions = json.loads(predictions_response.json["predictions"])
-            plot = make_plot(predictions)
-            return render_template("results.html", title="Results", plot=plot)
+        
+    json_data = json.loads(parsed_data)
+    predictions_response = make_prediction(json_data, res)
+    predictions = json.loads(predictions_response.json["predictions"])
+    plot = make_plot(predictions)
+    
+    return render_template("results.html", title="Results", plot=plot)
 
 
 @app.route('/example')
 def example():
     if request.args:
+        # on request for a sample file, pick one of 5 json files with prepared 
+        # battery data and return its content
         rand = randint(1,5)
         filename = "sample_input_{}.json".format(rand)
         with open("static/samples/{}".format(filename), "r") as json_file:
             json_data = json.load(json_file)
     else:
+        # on fileload return an empty object so the javascript disables 
+        # buttons and does not show a filename in the input
         filename = ""
         json_data = None
     return render_template("example.html", title="Samples", filename=filename, data=json_data)

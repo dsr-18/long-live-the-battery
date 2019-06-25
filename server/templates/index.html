@@ -1,36 +1,37 @@
 {% extends "base.html" %}
 {% block content %}
 
-        <div class="container h-100">
-            <div class="row h-100 justify-content-center align-items-center">
-                <div class="col-9 center-block">
+    <div class="container h-100">
+        <div class="row h-100 justify-content-center align-items-center">
+            <div class="col-9 center-block">
 
-                    <h2>Battery Cycle Life Prediction</h2>
-                    <form action="{{ url_for ('predict') }}" method="POST" enctype="multipart/form-data">
-                        <div class="input-group">
-                            <label class="input-group-btn">
-                                <span class="btn btn-primary">
-                                    Browse&hellip; <input type="file" id="file" name="jsonInput" style="display: none;">
-                                </span>
-                                <button type="button" class="btn btn-primary" id="previewButton" disabled>Preview</button>
-                            </label>
-                            <input type="text" class="form-control" readonly>
-                        </div>
-                        <small class="form-text text-muted">Upload your battery data in a json-formatted file</small>
-                        <br>
-                        <button type="submit" class="btn btn-primary" id="uploadButton" disabled>Predict</button>
-                    </form>
-                </div>
+                <h2>Battery Cycle Life Prediction</h2>
+                <form action="{{ url_for ('predict') }}" method="POST" enctype="multipart/form-data">
+                    <div class="input-group">
+                        <label class="input-group-btn">
+                            <span class="btn btn-primary">
+                                Browse&hellip; <input type="file" id="file" name="jsonInput" style="display: none;">
+                            </span>
+                            <button type="button" class="btn btn-primary" id="previewButton" disabled>Preview</button>
+                        </label>
+                        <input type="text" class="form-control" readonly>
+                    </div>
+                    <small class="form-text text-muted">Upload your battery data in a json-formatted file</small>
+                    <br>
+                    <button type="submit" class="btn btn-primary" id="uploadButton" disabled>Predict</button>
+                </form>
             </div>
         </div>
-        <div id="previewContainer"></div>
-        
-        <footer class="fixed-bottom font-small blue">
-            <div class="footer-copyright text-center py-3">Don't have any battery data lying around?
-            <a href="{{ url_for ('example') }}">Try our sample data.</a>
-            </div>                
-        </footer>
-        <script src="static/js/index.js"></script> 
+    </div>
+    <div id="previewContainer"></div>
+    
+    <footer class="fixed-bottom font-small blue">
+        <div class="footer-copyright text-center py-3">Don't have any battery data lying around?
+        <a href="{{ url_for ('example') }}">Try our sample data.</a>
+        </div>                
+    </footer>
+    
+    <script src="static/js/main.js"></script> 
 
 {% endblock %}
 
