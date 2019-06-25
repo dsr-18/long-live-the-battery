@@ -1,15 +1,11 @@
 import trainer.constants as cst
 
-from tensorflow.keras.layers import concatenate, LSTM, Conv1D, Flatten, TimeDistributed, Input, Dense, MaxPooling1D, Dropout
+from tensorflow.keras.layers import concatenate, LSTM, Conv1D, Flatten, TimeDistributed, Input, Dense, MaxPooling1D, Dropout, Activation
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.utils import get_custom_objects
 import tensorflow.keras.backend as K
 import tensorflow as tf
-
-
-from tensorflow.keras import backend as K
-from tensorflow.keras.layers import Activation
-from tensorflow.keras.utils import get_custom_objects
 
 
 def mae_remaining_cycles(y_true, y_pred):
