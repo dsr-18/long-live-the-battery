@@ -7,13 +7,14 @@ import plotly.graph_objs as go
 import tensorflow as tf
 from flask import Flask, render_template, request
 
+from clippy import Clippy, clipped_relu
 
 app = Flask(__name__)
 
 def load_model():
     global model  # bc YOLO
     model_dir = "saved_model/"
-    model = tf.keras.experimental.load_from_saved_model(model_dir)
+    model = tf.keras.experimental.load_from_saved_model(model_dir, custom_objects={'clippy': Clippy(clipped_relu)})
 
 
 def make_prediction(cycle_data, response):

@@ -7,6 +7,11 @@ import tensorflow.keras.backend as K
 import tensorflow as tf
 
 
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Activation
+from tensorflow.keras.utils import get_custom_objects
+
+
 def mae_remaining_cycles(y_true, y_pred):
     y_pred = tf.convert_to_tensor(y_pred)
     y_true = tf.dtypes.cast(y_true, y_pred.dtype)
@@ -89,7 +94,7 @@ def create_keras_model(window_size, loss, hparams_config=None):
     
     # Default configuration
     hparams = {
-        cst.CONV_FILTERS: 8,
+        cst.CONV_FILTERS: 32,
         cst.CONV_KERNEL: 9,
         cst.CONV_ACTIVATION: "relu",
         cst.LSTM_NUM_UNITS: 128,
@@ -144,9 +149,15 @@ def create_keras_model(window_size, loss, hparams_config=None):
     # define LSTM
     lstm_out = LSTM(hparams[cst.LSTM_NUM_UNITS], activation=hparams[cst.LSTM_ACTIVATION], name='recurrent')(all_concat)
     drop_out_2 = Dropout(rate=hparams[cst.DROPOUT_RATE_LSTM], name='dropout_lstm')(lstm_out)
+
+    # hidden dense layer
     hidden_dense = Dense(hparams[cst.DENSE_NUM_UNITS], name='hidden', activation=hparams[cst.DENSE_ACTIVATION])(drop_out_2)
-    # Relu activation on the last layer for striclty positive outputs
-    main_output = Dense(2, name='output', activation=hparams[cst.OUTPUT_ACTIVATION])(hidden_dense)
+
+    # update keras context with custom activation object
+    get_custom_objects().update({'clippy': Clippy(clipped_relu)})
+
+    # use (adapted) Relu activation on the last layer for striclty positive outputs
+    main_output = Dense(2, name='output', activation='clippy')(hidden_dense)
 
     model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])
     
@@ -155,3 +166,14 @@ def create_keras_model(window_size, loss, hparams_config=None):
     model.compile(loss=loss, optimizer=Adam(lr=hparams[cst.LEARNING_RATE], clipnorm=1.), metrics=metrics_list)
 
     return model
+
+
+# Custom activation for output layer: clipped relu
+class Clippy(Activation):
+    def __init__(self, activation, **kwargs):
+        super(Clippy, self).__init__(activation, **kwargs)
+        self.__name__ = 'clippy'
+
+
+def clipped_relu(x):
+    return K.relu(x, max_value=1.2)
