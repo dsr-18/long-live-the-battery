@@ -1,5 +1,5 @@
 $(function() {
-  var json_data = $('#uploadButton').data();
+  var json_data = $('#dataStorage').data();
   if (json_data["json"] !== "None") {
     $('#previewButton').prop("disabled", false);  
     $('#uploadButton').prop("disabled", false);  
@@ -8,9 +8,15 @@ $(function() {
   };
 
   $('#previewButton').on('click', function() {
-    console.log("preview clicked");
-    preview_plot(json_data);
+    var preview_data = {};
+    for (var key in json_data){
+      preview_data[key] = eval(json_data[key])
+    };    
+    preview_plot(preview_data);
   });
+
+//   $('#uploadButton').on('click', function() {
+//     $.post("")
 
 });
 
