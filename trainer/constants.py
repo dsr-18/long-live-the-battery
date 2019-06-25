@@ -32,6 +32,7 @@ BUCKET_NAME = 'ion_age_bucket'
 # Hyperparameter names
 CONV_KERNEL = 'conv_kernel'
 CONV_FILTERS = 'conv_filters'
+CONV_STRIDE = 'conv_stride'
 CONV_ACTIVATION = 'conv_activation'
 LSTM_NUM_UNITS = 'lstm_num_units'
 LSTM_ACTIVATION = 'lstm_activation'
