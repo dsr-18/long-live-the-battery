@@ -4,6 +4,9 @@ from trainer.custom_metrics_losses import mae_current_cycle, mae_remaining_cycle
 from tensorflow.keras.layers import concatenate, Conv1D, Conv2D, Flatten, Input, Dense, MaxPool1D, MaxPool2D, Dropout
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
+from trainer.split_model import Clippy, clipped_relu
+from tensorflow.keras.utils import get_custom_objects
+
 
 
 def create_keras_model(window_size, loss, hparams_config=None):
@@ -32,7 +35,6 @@ def create_keras_model(window_size, loss, hparams_config=None):
         cst.DENSE_NUM_UNITS: 32,
         cst.DENSE_NUM_UNITS_SCALAR: 100,
         cst.DENSE_ACTIVATION: "relu",
-        cst.OUTPUT_ACTIVATION: "relu",
         cst.LEARNING_RATE: 0.001,
         cst.DROPOUT_RATE_CNN: 0.3,
     }
@@ -111,8 +113,12 @@ def create_keras_model(window_size, loss, hparams_config=None):
     hidden_dense2 = Dense(hparams[cst.DENSE_NUM_UNITS],
                           activation=hparams[cst.DENSE_ACTIVATION],
                           name='hidden_dense2',)(hidden_dense)
+    
+    # update keras context with custom activation object
+    get_custom_objects().update({'clippy': Clippy(clipped_relu)})
+    
     # Relu activation on the last layer for striclty positive outputs
-    main_output = Dense(2, name='output', activation=hparams[cst.OUTPUT_ACTIVATION])(hidden_dense2)
+    main_output = Dense(2, name='output', activation='clippy')(hidden_dense2)
 
     model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])
     

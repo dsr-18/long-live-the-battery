@@ -124,10 +124,12 @@ def train_and_evaluate(args, tboard_dir, hparams=None):
 
     # create model
     if args.model == 'split_model':
+        print("Using split model!")
         model = split_model.create_keras_model(window_size=ds_config["window_size"],
                                                loss=args.loss,
                                                hparams_config=hparams)
     if args.model == 'full_cnn_model':
+        print("Using full cnn model!")
         model = full_cnn_model.create_keras_model(window_size=ds_config["window_size"],
                                                   loss=args.loss,
                                                   hparams_config=hparams)
@@ -171,6 +173,8 @@ def train_and_evaluate(args, tboard_dir, hparams=None):
         checkpoint_callback,
     ]
 
+    model.summary()
+    
     # train model
     history = model.fit(
         dataset_train, 
