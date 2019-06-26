@@ -1,5 +1,6 @@
 import json
 from random import randint
+import os
 
 import flask
 import numpy as np
@@ -8,15 +9,15 @@ import plotly.graph_objs as go
 import tensorflow as tf
 from flask import Flask, render_template, request
 from plot import plot_single_prediction
-
+from constants import NUM_SAMPLES, MODEL_DIR, SAMPLES_DIR
 from clippy import Clippy, clipped_relu
 
 app = Flask(__name__)
 
+
 def load_model():
     global model  # bc YOLO
-    model_dir = "saved_model/"
-    model = tf.keras.experimental.load_from_saved_model(model_dir, custom_objects={'clippy': Clippy(clipped_relu)})
+    model = tf.keras.experimental.load_from_saved_model(MODEL_DIR, custom_objects={'clippy': Clippy(clipped_relu)})
 
 
 def make_prediction(cycle_data, response):
@@ -90,14 +91,14 @@ def predict():
 @app.route('/example')
 def example():
     if request.args:
-        # on request for a sample file, pick one of 5 json files with prepared 
+        # on request for a sample file, pick a random json file with prepared 
         # battery data and return its content
-        rand = randint(1,5)
+        rand = randint(1,NUM_SAMPLES)
         filename = "sample_input_{}.json".format(rand)
-        with open("static/samples/{}".format(filename), "r") as json_file:
+        with open(os.path.join(SAMPLES_DIR,"{}".format(filename)), "r") as json_file:
             json_data = json.load(json_file)
     else:
-        # on fileload return an empty object so the javascript disables 
+        # on siteload return an empty object so the javascript disables 
         # buttons and does not show a filename in the input
         filename = ""
         json_data = None

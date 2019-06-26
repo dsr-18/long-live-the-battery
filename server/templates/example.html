@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-    <div class="container h-100">
+    <div class="container h-100" id="mainContainer">
         <div class="row h-100 justify-content-center align-items-center">
             <div class="col-9 center-block">
 
@@ -18,15 +18,15 @@
                 </div>
                 <small class="form-text text-muted">Upload your battery data in a json-formatted file</small>
                 </form>
-                <br>
+                <br style="line-height: 53%;">
                 <form action="{{ url_for ('predict') }}" method="POST">
                     <input type="text" id="dataStorage" name="jsonInput" style="display: none;" value="{{ data }}">
                     <button type="submit" class="btn btn-primary" id="uploadButton" disabled>Predict</button>
                 </form>
             </div>
         </div>
+        <div id="previewContainer"></div>
     </div>
-    <div id="previewContainer"></div>
 
     <script src="static/js/main.js"></script> 
 

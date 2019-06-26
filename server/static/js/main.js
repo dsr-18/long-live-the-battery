@@ -1,23 +1,32 @@
 $(function() {
 
+  var preview_exists = false;
   // file inputs are only interacted with on the index page, not on 
   // the examples page 
   $(document).on('change', ':file', function() {
-     // read in name of uploaded file and trigger the fileselect event
-      var input = $(this),
-          label = input.val().replace(/\\/g, '/').replace(/.*\//, '');
-      input.trigger('fileselect', label);
 
-      // read in content of uploaded file and trigger preview plot
-      if (this.files && this.files[0]) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-          sample_data = JSON.parse(reader.result);
-          $('#previewButton').prop("disabled", false);  
-          $('#uploadButton').prop("disabled", false);  
-        };
-        reader.readAsText(this.files[0]);
-      }
+    // if a preview exists, reset the previewContainer
+    if (preview_exists) {
+      $('#previewContainer').remove();
+      $('#mainContainer').append('<div id="previewContainer"></div>');
+      preview_exists = false;
+    };
+
+    // read in name of uploaded file and trigger the fileselect event
+    var input = $(this),
+        label = input.val().replace(/\\/g, '/').replace(/.*\//, '');
+    input.trigger('fileselect', label);
+
+    // read in content of uploaded file and trigger preview plot
+    if (this.files && this.files[0]) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        sample_data = JSON.parse(reader.result);
+        $('#previewButton').prop("disabled", false);  
+        $('#uploadButton').prop("disabled", false);  
+      };
+      reader.readAsText(this.files[0]);
+    }
     });
   
   // change label of text to name of uploaded file
@@ -47,12 +56,21 @@ $(function() {
 
   // trigger preview plot and scrolling
   $('#previewButton').on('click', function() {
-      //process example
-      var preview_data = {}
-      for (var key in sample_data){
-        preview_data[key] = eval(sample_data[key])
-      };    
-      preview_plot(preview_data);
+      if (!preview_exists) {
+        // process example
+        var preview_data = {}
+        for (var key in sample_data){
+          preview_data[key] = eval(sample_data[key])
+        };    
+        preview_plot(preview_data);
+        preview_exists = true;
+      };
+
+      // scroll to graph
+      document.querySelector('#preview').scrollIntoView({
+        behavior: 'smooth',
+        alignTo: true,
+      });
   });
 
 })
@@ -79,7 +97,7 @@ function preview_plot(json_data) {
   var discharge_time = parseFloat(json_data['Discharge_time'][0][0]).toFixed(2);
   var qd = parseFloat(json_data['QD'][0][0]).toFixed(2);
   
-  // create preview container
+  // create preview div
   $('#previewContainer').append('<div class="container h-100">\
   <div class="row h-100 justify-content-center align-items-center">\
   <div class="col-9 center-block"><div id="preview">\
@@ -97,10 +115,6 @@ function preview_plot(json_data) {
     }, 800);
     return false;
   }));   
-  // automatically scroll to graph
-  document.querySelector('#preview').scrollIntoView({
-    behavior: 'smooth',
-    alignTo: true,
-  });
+
 }
 
