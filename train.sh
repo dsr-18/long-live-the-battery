@@ -35,7 +35,6 @@ while getopts ":hw:e:b:s:t:l:o:v:z:f:m:" opt; do
                             \n\t -t stride\
                             \n\t -l loss\
                             \n\t -o optimizer\
-                            \n\t -a learning-rate\
                             \n\t -v verbosity\
                             \n\t -f save-from\
                             \n\t -m model\
@@ -59,9 +58,6 @@ while getopts ":hw:e:b:s:t:l:o:v:z:f:m:" opt; do
             ;;
         l)
             params+=(--loss $OPTARG)
-            ;;
-        a)
-            params+=(--learning-rate $OPTARG)
             ;;
         v)
             params+=(--verbosity $OPTARG)

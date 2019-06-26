@@ -12,14 +12,10 @@ avoid hp.RealInterval and hp.IntInterval.
 """
 
 split_model_hparams = [
-   hp.HParam(cst.CONV_KERNEL, hp.Discrete([7, 13])),
-   # hp.HParam(cst.CONV_FILTERS, hp.Discrete([16, 32])),
-   # hp.HParam(cst.CONV_ACTIVATION, hp.Discrete(['relu', 'sigmoid'])),
-   # hp.HParam(cst.CONV_STRIDE, hp.Discrete([1,3])),
-   hp.HParam(cst.LSTM_NUM_UNITS, hp.Discrete([128, 64])),
-   # hp.HParam(cst.LSTM_ACTIVATION, hp.Discrete(['sigmoid', 'tanh'])),
-   # hp.HParam(cst.DENSE_NUM_UNITS, hp.Discrete([32, 64])),
-   # hp.HParam(cst.DENSE_ACTIVATION, hp.Discrete(['relu', 'sigmoid']))
+   hp.HParam(cst.CONV_KERNEL, hp.Discrete([3, 13, 37])),
+   hp.HParam(cst.CONV_FILTERS, hp.Discrete([8, 32])),
+   hp.HParam(cst.LSTM_NUM_UNITS, hp.Discrete([64, 128])),
+   # hp.HParam(cst.DENSE_NUM_UNITS, hp.Discrete([32])),
    # hp.HParam(cst.OUTPUT_ACTIVATION, hp.Discrete(['relu', 'sigmoid'])),
    # hp.HParam(cst.LEARNING_RATE, hp.Discrete([0.0001, 0.00001, 0.000005])),
    # hp.HParam(cst.DROPOUT_RATE_CNN, hp.Discrete([0.3, 0.4])),

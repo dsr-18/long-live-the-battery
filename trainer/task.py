@@ -49,7 +49,7 @@ def get_args():
         help='number of times to go through the data, default=3')
     parser.add_argument(
         '--batch-size',
-        default=16,
+        default=32,
         type=int,
         help='number of records to read during each training step, default=16')
     parser.add_argument(
@@ -67,11 +67,6 @@ def get_args():
         default=1,
         type=int,
         help='stride inside sliding window in training sample generation, default=1')
-    parser.add_argument(
-        '--learning-rate',
-        default=.01,      # NOT USED RIGHT NOW
-        type=float,
-        help='learning rate for gradient descent, default=.01')
     parser.add_argument(
         '--verbosity',
         choices=['DEBUG', 'ERROR', 'FATAL', 'INFO', 'WARN'],
@@ -183,7 +178,7 @@ def train_and_evaluate(args, tboard_dir, hparams=None):
         steps_per_epoch=steps_per_epoch_train,
         validation_data=dataset_validate,
         validation_steps=steps_per_epoch_validate,
-        verbose=1,
+        verbose=2,
         callbacks=callbacks)
     
     mae_current = min(history.history["val_mae_current_cycle"])
