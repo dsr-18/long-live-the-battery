@@ -8,7 +8,6 @@ from trainer.split_model import Clippy, clipped_relu
 from tensorflow.keras.utils import get_custom_objects
 
 
-
 def create_keras_model(window_size, loss, hparams_config=None):
     """Creates the Keras model.
     
@@ -29,7 +28,7 @@ def create_keras_model(window_size, loss, hparams_config=None):
     hparams = {
         cst.CONV_FILTERS: 16,
         cst.CONV_KERNEL: 3,
-        cst.CONV_KERNEL_2D: (3, 9),
+        cst.CONV_KERNEL_2D: (3, 7),
         cst.CONV_STRIDE: 1,
         cst.CONV_ACTIVATION: "relu",
         cst.DENSE_NUM_UNITS: 32,
