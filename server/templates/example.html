@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+
+    <div class="container h-100" id="mainContainer">
+        <div class="row h-100 justify-content-center align-items-center">
+            <div class="col-9 center-block">
+
+                <h2>Battery Cycle Life Prediction</h2>
+                <form action="{{ url_for ('example') }}">
+                <div class="input-group">
+                    <label class="input-group-btn">
+                        <span class="btn btn-warning">
+                            Load random sample&hellip; <input type="submit" id="sampleButton" name="randomSample" style="display: none;">
+                        </span>
+                        <button type="button" class="btn btn-primary" id="previewButton" disabled>Preview</button>
+                    </label>
+                    <input type="text" class="form-control" value="{{ filename }}" readonly>
+                </div>
+                <small class="form-text text-muted">Upload your battery data in a json-formatted file</small>
+                </form>
+                <br style="line-height: 53%;">
+                <form action="{{ url_for ('predict') }}" method="POST">
+                    <input type="text" id="dataStorage" name="jsonInput" style="display: none;" value="{{ data }}">
+                    <button type="submit" class="btn btn-primary" id="uploadButton" disabled>Predict</button>
+                </form>
+            </div>
+        </div>
+        <div id="previewContainer"></div>
+    </div>
+
+    <script src="static/js/main.js"></script> 
+
+{% endblock %}
+

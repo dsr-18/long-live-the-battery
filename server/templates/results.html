@@ -1,19 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
 
-
-<div class="container h-100">
-    <div class="row h-100 justify-content-center align-items-center">
-        <div class="col-9 center-block">
-            <h2>Your battery lifetime</h2>
+<div class="row h-100 justify-content-center align-items-center">
+    <div class="container">
+        <div class="col-12">
+            <h2 class="text-center">Your Battery Lifetime</h2>
             <div id="chart" class="chart"></div>
-            <!-- Predictions: {{ prediction }} -->
-            <br>
         </div>
     </div>
 </div>
-        
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
 <script>
     var graphs = {{ plot | safe }};
     Plotly.plot('chart',graphs,{});
