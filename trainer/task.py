@@ -98,6 +98,12 @@ def get_args():
         type=int,
         help='epoch after which model checkpoints are saved, default=80'
     )
+    parser.add_argument(
+        '--model',
+        default='split_model',
+        type=str,
+        help='The type of model to use, default="split_model", options="split_model", "full_cnn_model"'
+    )
     args, _ = parser.parse_known_args()
     return args
 

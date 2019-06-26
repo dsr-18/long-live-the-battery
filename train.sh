@@ -25,7 +25,7 @@ JOB_RUN_DIR="${PACKAGE_STAGING_PATH}/jobs/${JOB_NAME}"
 
 # parse command-line args
 params=()
-while getopts ":hw:e:b:s:t:l:o:v:z:f:" opt; do
+while getopts ":hw:e:b:s:t:l:o:v:z:f:m:" opt; do
     case $opt in
         h)
             printf "Options:\n\t -w window-size\
@@ -38,6 +38,7 @@ while getopts ":hw:e:b:s:t:l:o:v:z:f:" opt; do
                             \n\t -a learning-rate\
                             \n\t -v verbosity\
                             \n\t -f save-from\
+                            \n\t -m model\
                             \n\t -z shuffle-buffer\n" >&2
             exit 1
             ;;
@@ -70,6 +71,9 @@ while getopts ":hw:e:b:s:t:l:o:v:z:f:" opt; do
             ;;
         f)
             params+=(--save-from $OPTARG)
+            ;;
+        m)
+            params+=(--model $OPTARG)
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
