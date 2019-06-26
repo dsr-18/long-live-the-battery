@@ -4,6 +4,8 @@ from tensorflow.keras.layers import concatenate, LSTM, Conv1D, Flatten, TimeDist
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from trainer.custom_metrics_losses import mae_current_cycle, mae_remaining_cycles
+from tensorflow.keras.utils import get_custom_objects
+import tensorflow.keras.backend as K
 
 
 def create_keras_model(window_size, loss, hparams_config=None):
