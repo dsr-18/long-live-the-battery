@@ -34,7 +34,7 @@ def create_keras_model(window_size, loss, hparams_config=None):
         cst.CONV_ACTIVATION: "relu",
         cst.DENSE_NUM_UNITS: 32,
         cst.DENSE_ACTIVATION: "relu",
-        cst.LEARNING_RATE: 0.001,
+        cst.LEARNING_RATE: 0.0001,
         cst.DROPOUT_RATE_CNN: 0.3,
     }
     # update hyperparameters with arguments from task_hyperparameter.py
@@ -43,19 +43,19 @@ def create_keras_model(window_size, loss, hparams_config=None):
 
     # define Inputs
     qdlin_in = Input(shape=(window_size, cst.STEPS, cst.INPUT_DIM), name=cst.QDLIN_NAME)
-    tdlin_in = Input(shape=(window_size, cst.STEPS, cst.INPUT_DIM), name=cst.TDLIN_NAME)
+    # tdlin_in = Input(shape=(window_size, cst.STEPS, cst.INPUT_DIM), name=cst.TDLIN_NAME)
     ir_in = Input(shape=(window_size, cst.INPUT_DIM), name=cst.INTERNAL_RESISTANCE_NAME)
     dt_in = Input(shape=(window_size, cst.INPUT_DIM), name=cst.DISCHARGE_TIME_NAME)
     qd_in = Input(shape=(window_size, cst.INPUT_DIM), name=cst.QD_NAME)
     
     # ------ CNN PART FOR DETAIL FEATURES ------
-    concat_detail = concatenate([qdlin_in, tdlin_in], axis=3)
+    # concat_detail = concatenate([qdlin_in, tdlin_in], axis=3)
     cnn_detail = Conv2D(filters=hparams[cst.CONV_FILTERS],
                         kernel_size=hparams[cst.CONV_KERNEL_2D],
                         strides=hparams[cst.CONV_STRIDE_2D],
                         activation=hparams[cst.CONV_ACTIVATION],
                         padding='same',
-                        name='cnn_detail')(concat_detail)
+                        name='cnn_detail')(qdlin_in)
     maxpool_detail = MaxPool2D(pool_size=(1, 2), name='maxpool_detail')(cnn_detail)
 
     cnn_detail2 = Conv2D(filters=hparams[cst.CONV_FILTERS] * 2,
@@ -110,7 +110,13 @@ def create_keras_model(window_size, loss, hparams_config=None):
     
     main_output = Dense(2, name='output', activation='clippy')(hidden_dense2)
 
-    model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])
+    # # Splitting neurons into two parts for the two outputs
+    # split_cc, split_rc = tf.split(hidden_dense2, num_or_size_splits=2, axis=-1)
+    # cc_output = Dense(1, name='cc_output', activation='clippy')(split_cc)
+    # rc_output = Dense(1, name='rc_output', activation='clippy')(split_rc)
+    # main_output = concatenate([cc_output, rc_output], axis=-1, name='main_output')
+    
+    model = Model(inputs=[qdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])
     
     metrics_list = [mae_current_cycle, mae_remaining_cycles]
     
