@@ -26,13 +26,13 @@ def create_keras_model(window_size, loss, hparams_config=None):
         
     # Default configuration
     hparams = {
-        cst.CONV_FILTERS: 16,
+        cst.CONV_FILTERS: 32,
         cst.CONV_KERNEL: 3,
-        cst.CONV_KERNEL_2D: (3, 7),
+        cst.CONV_KERNEL_2D: (3, 9),
         cst.CONV_STRIDE: 1,
+        cst.CONV_STRIDE_2D: (1, 3),
         cst.CONV_ACTIVATION: "relu",
         cst.DENSE_NUM_UNITS: 32,
-        cst.DENSE_NUM_UNITS_SCALAR: 100,
         cst.DENSE_ACTIVATION: "relu",
         cst.LEARNING_RATE: 0.001,
         cst.DROPOUT_RATE_CNN: 0.3,
@@ -52,7 +52,7 @@ def create_keras_model(window_size, loss, hparams_config=None):
     concat_detail = concatenate([qdlin_in, tdlin_in], axis=3)
     cnn_detail = Conv2D(filters=hparams[cst.CONV_FILTERS],
                         kernel_size=hparams[cst.CONV_KERNEL_2D],
-                        strides=hparams[cst.CONV_STRIDE],
+                        strides=hparams[cst.CONV_STRIDE_2D],
                         activation=hparams[cst.CONV_ACTIVATION],
                         padding='same',
                         name='cnn_detail')(concat_detail)
@@ -60,7 +60,7 @@ def create_keras_model(window_size, loss, hparams_config=None):
 
     cnn_detail2 = Conv2D(filters=hparams[cst.CONV_FILTERS] * 2,
                          kernel_size=hparams[cst.CONV_KERNEL_2D],
-                         strides=hparams[cst.CONV_STRIDE],
+                         strides=hparams[cst.CONV_STRIDE_2D],
                          activation=hparams[cst.CONV_ACTIVATION],
                          padding='same',
                          name='cnn_detail2')(maxpool_detail)
@@ -68,21 +68,13 @@ def create_keras_model(window_size, loss, hparams_config=None):
 
     cnn_detail3 = Conv2D(filters=hparams[cst.CONV_FILTERS] * 4,
                          kernel_size=hparams[cst.CONV_KERNEL_2D],
-                         strides=hparams[cst.CONV_STRIDE],
+                         strides=hparams[cst.CONV_STRIDE_2D],
                          activation=hparams[cst.CONV_ACTIVATION],
                          padding='same',
                          name='cnn_detail3')(maxpool_detail2)
     maxpool_detail3 = MaxPool2D(pool_size=(2, 2), name='maxpool_detail3')(cnn_detail3)
     
-    cnn_detail4 = Conv2D(filters=hparams[cst.CONV_FILTERS] * 4,
-                         kernel_size=hparams[cst.CONV_KERNEL_2D],
-                         strides=hparams[cst.CONV_STRIDE],
-                         activation=hparams[cst.CONV_ACTIVATION],
-                         padding='same',
-                         name='cnn_detail4')(maxpool_detail3)
-    maxpool_detail4 = MaxPool2D(pool_size=(2, 2), name='maxpool_detail4')(cnn_detail4)
-    
-    flat_detail = Flatten(name='flat_detail')(maxpool_detail4)
+    flat_detail = Flatten(name='flat_detail')(maxpool_detail3)
     dropout_detail = Dropout(rate=hparams[cst.DROPOUT_RATE_CNN], name='dropout_detail')(flat_detail)
 
     # ------ CNN PART FOR SCALAR FEATURES ------
@@ -106,17 +98,16 @@ def create_keras_model(window_size, loss, hparams_config=None):
     
     concat_all = concatenate([dropout_detail, dropout_scalar], axis=1, name="concat_all")
     
-    hidden_dense = Dense(128,
-                         activation=hparams[cst.DENSE_ACTIVATION],
-                         name='hidden_dense',)(concat_all)
+    # hidden_dense = Dense(128,
+    #                      activation=hparams[cst.DENSE_ACTIVATION],
+    #                      name='hidden_dense',)(concat_all)
     hidden_dense2 = Dense(hparams[cst.DENSE_NUM_UNITS],
                           activation=hparams[cst.DENSE_ACTIVATION],
-                          name='hidden_dense2',)(hidden_dense)
+                          name='hidden_dense2',)(concat_all)
     
     # update keras context with custom activation object
     get_custom_objects().update({'clippy': Clippy(clipped_relu)})
     
-    # Relu activation on the last layer for striclty positive outputs
     main_output = Dense(2, name='output', activation='clippy')(hidden_dense2)
 
     model = Model(inputs=[qdlin_in, tdlin_in, ir_in, dt_in, qd_in], outputs=[main_output])

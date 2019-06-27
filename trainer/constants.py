@@ -44,5 +44,5 @@ DROPOUT_RATE_CNN = 'dropout_cnn'
 DROPOUT_RATE_LSTM = 'dropout_lstm'
 
 # unique full_cnn_model parameters
-DENSE_NUM_UNITS_SCALAR = 'scalar_dense_num_units'
 CONV_KERNEL_2D = 'conv_kernel_2d'
+CONV_STRIDE_2D = 'conv_stride_2d'
