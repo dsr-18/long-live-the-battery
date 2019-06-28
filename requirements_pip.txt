@@ -1,5 +1,0 @@
-tensorflow>=2.0.0-beta
-tensorboard
-sklearn
-plotly>=3.10.0
-google-cloud-storage>=1.16.1
