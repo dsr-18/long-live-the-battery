@@ -3,73 +3,9 @@ import trainer.constants as cst
 from tensorflow.keras.layers import concatenate, LSTM, Conv1D, Flatten, TimeDistributed, Input, Dense, MaxPooling1D, Dropout, Activation
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
+from trainer.custom_metrics_losses import mae_current_cycle, mae_remaining_cycles
 from tensorflow.keras.utils import get_custom_objects
 import tensorflow.keras.backend as K
-import tensorflow as tf
-
-
-def mae_remaining_cycles(y_true, y_pred):
-    y_pred = tf.convert_to_tensor(y_pred)
-    y_true = tf.dtypes.cast(y_true, y_pred.dtype)
-    diff = tf.math.abs(y_true - y_pred)
-    return K.mean(diff, axis=0)[1] * 2159.0  # TODO: scaling factor hard coded for now!
-
-
-def mae_current_cycle(y_true, y_pred):
-    y_pred = tf.convert_to_tensor(y_pred)
-    y_true = tf.dtypes.cast(y_true, y_pred.dtype)
-    diff = tf.math.abs(y_true - y_pred)
-    return K.mean(diff, axis=0)[0] * 2159.0  # TODO: scaling factor hard coded for now!
-
-
-def mape_current_cycle(y_true, y_pred):
-    """Copied from tf.keras.losses.mean_absolute_percentage_error and changed the axis to 0.
-    This calculates the mean over the two different outputs of the model."""
-    y_pred = tf.convert_to_tensor(y_pred)
-    y_true = tf.dtypes.cast(y_true, y_pred.dtype)
-    diff = tf.math.abs(
-        (y_true - y_pred) / K.clip(tf.math.abs(y_true), 1 / 2159.0, None))
-    return 100. * K.mean(diff, axis=0)[0]
-
-    
-def mape_remaining_cycles(y_true, y_pred):
-    """Copied from tf.keras.losses.mean_absolute_percentage_error and changed the axis to 0.
-    This calculates the mean over the two different outputs of the model."""
-    y_pred = tf.convert_to_tensor(y_pred)
-    y_true = tf.dtypes.cast(y_true, y_pred.dtype)
-    diff = tf.math.abs(
-        (y_true - y_pred) / K.clip(tf.math.abs(y_true), 1 / 2159.0, None))
-    return 100. * K.mean(diff, axis=0)[1]
-
-    
-def log_acc_ratio_current_cycle(y_true, y_pred):
-    """Copied from tf.keras.losses.mean_absolute_percentage_error and changed the axis to 0.
-    This calculates the mean over the two different outputs of the model."""
-    y_pred = tf.convert_to_tensor(y_pred)
-    y_true = tf.dtypes.cast(y_true, y_pred.dtype)
-    y_true_clipped = K.clip(tf.math.abs(y_true), 1 / 2159.0, None)
-    log_acc_ratio = tf.math.log((tf.math.abs(y_pred) / y_true_clipped) + 1)
-    return K.mean(log_acc_ratio, axis=0)[0]
-
-    
-def log_acc_ratio_remaining_cycles(y_true, y_pred):
-    """Copied from tf.keras.losses.mean_absolute_percentage_error and changed the axis to 0.
-    This calculates the mean over the two different outputs of the model."""
-    y_pred = tf.convert_to_tensor(y_pred)
-    y_true = tf.dtypes.cast(y_true, y_pred.dtype)
-    y_true_clipped = K.clip(tf.math.abs(y_true), 1 / 2159.0, None)
-    log_acc_ratio = tf.math.log((tf.math.abs(y_pred) / y_true_clipped) + 1)
-    return K.mean(log_acc_ratio, axis=0)[1]
-
-    
-def log_acc_ratio_loss(y_true, y_pred):
-    """Copied from tf.keras.losses.mean_absolute_percentage_error and changed the axis to 0.
-    This calculates the mean over the two different outputs of the model."""
-    y_pred = tf.convert_to_tensor(y_pred)
-    y_true = tf.dtypes.cast(y_true, y_pred.dtype)
-    y_true_clipped = K.clip(tf.math.abs(y_true), 1 / 2159.0, None)
-    log_acc_ratio = tf.math.log((tf.math.abs(y_pred) / y_true_clipped) + 1)
-    return tf.math.reduce_mean(log_acc_ratio)
 
 
 def create_keras_model(window_size, loss, hparams_config=None):
