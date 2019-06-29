@@ -39,25 +39,27 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
     period: Save model only for every n-th epoch.
     """
     def __init__(self, log_dir, dataset_path, dataset_config, start_epoch=0, 
-                 save_best_only=False, save_last_only=False, period=1):
+                 save_best_only=False, save_last_only=False, save_eval_plot=True, period=1):
         self.log_dir = log_dir
         self.start_epoch = start_epoch
         self.save_best_only = save_best_only
         self.save_last_only = save_last_only
+        self.save_eval_plot = save_eval_plot
         self.period = period
         self.cloud_run = cst.BUCKET_NAME in log_dir
         if self.cloud_run:
             self.client = storage.Client()
             self.bucket = self.client.get_bucket(cst.BUCKET_NAME)  # Only used for saving evaluation plots
-        self.validation_dataset = dp.create_dataset(data_dir=dataset_path,
-                                                    window_size=dataset_config["window_size"],
-                                                    shift=dataset_config["shift"],
-                                                    stride=dataset_config["stride"],
-                                                    batch_size=dataset_config["batch_size"],
-                                                    cycle_length=1,  # Has to be set for plotting
-                                                    num_parallel_calls=1,  # Has to be set for plotting
-                                                    shuffle=False,  # Has to be set for plotting
-                                                    repeat=False)  # Has to be set for plotting
+        if self.save_eval_plot:
+            self.validation_dataset = dp.create_dataset(data_dir=dataset_path,
+                                                        window_size=dataset_config["window_size"],
+                                                        shift=dataset_config["shift"],
+                                                        stride=dataset_config["stride"],
+                                                        batch_size=dataset_config["batch_size"],
+                                                        cycle_length=1,  # Has to be set for plotting
+                                                        num_parallel_calls=1,  # Has to be set for plotting
+                                                        shuffle=False,  # Has to be set for plotting
+                                                        repeat=False)  # Has to be set for plotting
     
     def on_train_begin(self, logs=None):
         self.last_saved_epoch = None
@@ -71,17 +73,20 @@ class CustomCheckpoints(tf.keras.callbacks.Callback):
             if self.save_best_only:
                 if self.current_loss < self.lowest_loss:
                     tf.keras.experimental.export_saved_model(self.model, self.checkpoint_dir)
-                    self._save_evaluation_plot(self.model, self.checkpoint_dir, self.validation_dataset)
+                    if self.save_eval_plot:
+                        self._save_evaluation_plot(self.model, self.checkpoint_dir, self.validation_dataset)
                     self.lowest_loss = self.current_loss
                     self.last_saved_epoch = epoch
             else:
                 tf.keras.experimental.export_saved_model(self.model, self.checkpoint_dir)
-                self._save_evaluation_plot(self.model, self.checkpoint_dir, self.validation_dataset)
+                if self.save_eval_plot:
+                    self._save_evaluation_plot(self.model, self.checkpoint_dir, self.validation_dataset)
 
     def on_train_end(self, logs=None):
         last_epoch_dir = os.path.join(self.log_dir, "checkpoints", "last_epoch_loss_{}".format(self.current_loss))
         tf.keras.experimental.export_saved_model(self.model, last_epoch_dir)
-        self._save_evaluation_plot(self.model, last_epoch_dir, self.validation_dataset)
+        if self.save_eval_plot:
+            self._save_evaluation_plot(self.model, last_epoch_dir, self.validation_dataset)
         
     def _save_evaluation_plot(self, model, checkpoint_dir, dataset, file_name='validation_plot.html'):
         html_dir = os.path.join(checkpoint_dir, file_name)
