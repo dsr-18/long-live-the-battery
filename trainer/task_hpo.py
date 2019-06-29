@@ -5,12 +5,9 @@ import datetime
 import tensorflow as tf
 from tensorboard.plugins.hparams import api as hp
 
-import trainer.data_pipeline as dp
-import trainer.split_model as split_model
 import trainer.constants as cst
 import trainer.task as task
 from trainer.hp_config import split_model_hparams
-from trainer.callbacks import CustomCheckpoints
 
 
 def run(run_dir, hparams, args):

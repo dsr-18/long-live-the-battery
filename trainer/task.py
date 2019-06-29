@@ -8,6 +8,7 @@ from absl import logging
 import trainer.constants as cst
 import trainer.data_pipeline as dp
 import trainer.split_model as split_model
+import trainer.full_cnn_model as full_cnn_model
 from trainer.callbacks import CustomCheckpoints
 
 
@@ -93,6 +94,12 @@ def get_args():
         type=int,
         help='epoch after which model checkpoints are saved, default=80'
     )
+    parser.add_argument(
+        '--model',
+        default='split_model',
+        type=str,
+        help='The type of model to use, default="split_model", options="split_model", "full_cnn_model"'
+    )
     args, _ = parser.parse_known_args()
     return args
 
@@ -116,9 +123,16 @@ def train_and_evaluate(args, tboard_dir, hparams=None):
     ds_val_path = args.data_dir_validate
 
     # create model
-    model = split_model.create_keras_model(window_size=ds_config["window_size"],
-                                           loss=args.loss,
-                                           hparams_config=hparams)
+    if args.model == 'split_model':
+        print("Using split model!")
+        model = split_model.create_keras_model(window_size=ds_config["window_size"],
+                                               loss=args.loss,
+                                               hparams_config=hparams)
+    if args.model == 'full_cnn_model':
+        print("Using full cnn model!")
+        model = full_cnn_model.create_keras_model(window_size=ds_config["window_size"],
+                                                  loss=args.loss,
+                                                  hparams_config=hparams)
     
     # Calculate steps_per_epoch_train, steps_per_epoch_test
     # This is needed, since for counting repeat has to be false
@@ -159,6 +173,8 @@ def train_and_evaluate(args, tboard_dir, hparams=None):
         checkpoint_callback,
     ]
 
+    model.summary()
+    
     # train model
     history = model.fit(
         dataset_train, 

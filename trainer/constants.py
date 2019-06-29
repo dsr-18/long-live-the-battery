@@ -42,3 +42,7 @@ OUTPUT_ACTIVATION = 'output_activation'
 LEARNING_RATE = 'learning_rate'
 DROPOUT_RATE_CNN = 'dropout_cnn'
 DROPOUT_RATE_LSTM = 'dropout_lstm'
+
+# unique full_cnn_model parameters
+CONV_KERNEL_2D = 'conv_kernel_2d'
+CONV_STRIDE_2D = 'conv_stride_2d'
