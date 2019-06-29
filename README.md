@@ -1,6 +1,6 @@
 # long-live-the-battery
 
-Predicting total battery cycle life time with machine learning.
+Predicting total battery cycle life time with [TensorFlow 2](https://www.tensorflow.org/beta). We're going to publish a blog post describing the project in-depth soon.
 
 This project is based on the work done in the paper ['Data driven prediciton of battery cycle life before capacity degradation'](https://www.nature.com/articles/s41560-019-0356-8) by K.A. Severson, P.M. Attia, et al., and uses the corresponding data set. The original instructions for how to load the data can be found [here](https://github.com/rdbraatz/data-driven-prediction-of-battery-cycle-life-before-capacity-degradation).
 
@@ -9,7 +9,7 @@ This project is based on the work done in the paper ['Data driven prediciton of 
 
 We recommend to set up a virtual environment using a tool like [Virtualenv](https://virtualenv.pypa.io/en/latest/).
 
-Clone this repo 
+Clone this repo
 ```
 git clone https://github.com/dsr-18/long-live-the-battery
 ```
@@ -31,7 +31,7 @@ long-live-the-battery
 ├── data
 |   ├── 2017-05-12_batchdata_updated_struct_errorcorrect.mat
 |   ├── 2018-04-12_batchdata_updated_struct_errorcorrect.mat
-|   ├── 2017-06-30_batchdata_updated_struct_errorcorrect.mat
+|   └── 2017-06-30_batchdata_updated_struct_errorcorrect.mat
 ```
 2. Make sure *data* is empty otherwise. Then from the base directory run
 ```
