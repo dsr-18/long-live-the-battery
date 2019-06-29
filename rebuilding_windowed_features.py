@@ -3,6 +3,7 @@ import pandas as pd
 import pickle
 from os.path import join
 import re
+import math
 
 from scipy.stats import skew, kurtosis
 from sklearn.linear_model import LinearRegression
@@ -10,9 +11,15 @@ from sklearn.linear_model import LinearRegression
 import trainer.constants as cst
 
 
-def build_windowed_feature_df(preprocessed_pkl, window_size=20, shift=20):
+WINDOW_SIZE = 50
+W_SHIFT = 5
+W_STRIDE = 1
+# shift always at 5, stride:  1 for 10/20, 2 for 50, 4 for 100
+
+def build_windowed_feature_df(preprocessed_pkl, window_size, shift, stride, debug=False):    
     """Returns a pandas DataFrame with all originally used features out of a loaded batch dict, 
        organized by windows"""
+    print("window_size={}, shift={}, stride={}".format(window_size, shift, stride))
     cell_dfs = []
 
     for cell_k, cell_v in preprocessed_pkl.items():
@@ -29,14 +36,19 @@ def build_windowed_feature_df(preprocessed_pkl, window_size=20, shift=20):
         cycle_keys = list(cell_cycles.keys())
         window_cycle_keys = []
         for i, w_slice in enumerate(range(0, len(cycle_keys), shift)):
-            cycle_keys_slice = cycle_keys[w_slice : w_slice + window_size]
-            if len(cycle_keys_slice) % window_size == 0:  # drop remainder
+            cycle_keys_slice = cycle_keys[w_slice : (w_slice + window_size) : stride]
+            slice_size = len(cycle_keys_slice)
+            if slice_size % (window_size//stride) != 0:     # drop remainder
+                print(w_slice, 'skip short slice of size', slice_size)
+                break
+            else:
                 window_cycle_keys.append(cycle_keys_slice)
         
         # init value arrays
         total_cycles = len(cell_cycles)
         num_windows = len(window_cycle_keys)
-        assert num_windows == int((total_cycles-window_size) // shift) + 1
+        assert_n = int((total_cycles-window_size) // shift) + 1
+        assert math.isclose(num_windows, assert_n, rel_tol=1), "num_windows should be {}, but was {}".format(assert_n, num_windows)
         print('num_windows', num_windows, 'total_cycles', total_cycles)
         minimum_dQ_window = np.zeros(num_windows)
         variance_dQ_window = np.zeros(num_windows)
@@ -60,7 +72,8 @@ def build_windowed_feature_df(preprocessed_pkl, window_size=20, shift=20):
             # summary keys may not line up with cycle keys, since cycles could be cleaned up
             summary_key_c1 = np.where(np.array(cycle_keys)==key_c1)[0][0]
             summary_key_clast = np.where(np.array(cycle_keys)==key_clast)[0][0]
-            print("{}: [{}, {}], summary_keys: [{}, {}]".format(i, key_c1, key_clast, summary_key_c1, summary_key_clast))
+            if debug:
+                print("{}: [{}, {}], summary_keys: [{}, {}]".format(i, key_c1, key_clast, summary_key_c1, summary_key_clast))
 
             # 1. delta_Q_100_10(V) -> delta_Q_window(V)
             dQ_window = cell_cycles[key_clast]['Qdlin'] - cell_cycles[key_c1]['Qdlin']
@@ -74,7 +87,7 @@ def build_windowed_feature_df(preprocessed_pkl, window_size=20, shift=20):
             # discharge cappacities; q.shape = (window_size, 1); 
             q = cell_summary['QD'][summary_key_c1:summary_key_clast+1].reshape(-1, 1).astype(np.float64) 
             # Cylce index from 2 to last; X.shape = (window_size, 1)
-            X = np.arange(window_size).reshape(-1, 1).astype(np.int32) 
+            X = np.arange(len(q)).reshape(-1, 1).astype(np.int32) 
 
             linear_regressor_window = LinearRegression()
             linear_regressor_window.fit(X, q)
@@ -121,8 +134,8 @@ def build_windowed_feature_df(preprocessed_pkl, window_size=20, shift=20):
 
 if __name__ == "__main__":
     preprocessed_pkl = pickle.load(open(cst.PROCESSED_DATA, "rb"))  # dict
-    windowed_features_df = build_windowed_feature_df(preprocessed_pkl)
-
-    save_csv_path = join(cst.DATA_DIR, "rebuild_windowed_features.csv")
+    windowed_features_df = build_windowed_feature_df(preprocessed_pkl, WINDOW_SIZE, W_SHIFT, W_STRIDE)
+    fname = "rebuild_windowed_features_{}_{}_{}.csv".format(WINDOW_SIZE, W_SHIFT, W_STRIDE)
+    save_csv_path = join(cst.DATA_DIR, fname)
     windowed_features_df.to_csv(save_csv_path, index=False)
     print("Saved features to", save_csv_path)
