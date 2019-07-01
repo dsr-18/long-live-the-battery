@@ -4,6 +4,7 @@ import numpy as np
 
 REMAINING_CYCLES_NAME = "Remaining_cycles"
 
+
 def skewed_normalized_sigmoid(x):  
     sigmoid_mod = np.exp(-np.logaddexp(0, (-x + 5) * 1.2))
     return (sigmoid_mod - sigmoid_mod.min()) / (sigmoid_mod.max() - sigmoid_mod.min())
@@ -168,4 +169,10 @@ def plot_single_prediction(prediction,
             font=dict(family='Arial', size=22, color=highlight_color)
         )]
     )
-    return go.Figure(data=[mean_trace, sigmoid_trace, window_trace, dot_trace], layout=layout)
+    
+    fig = go.Figure(data=[mean_trace, sigmoid_trace, window_trace, dot_trace], layout=layout)
+    
+    if inline:
+        pyo.iplot(fig)
+    else:
+        return fig
