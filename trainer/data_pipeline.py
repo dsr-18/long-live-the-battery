@@ -224,6 +224,14 @@ def calculate_and_save_scaling_factors(data_dict, train_test_split, csv_dir):
     print("Calculate scaling factors...")
     scaling_factors = dict()
     
+    if train_test_split != None:
+        # only take training cells
+        data_dict = {k: v for k, v in data_dict.items() if k in train_test_split["train"]}
+    else:
+        # only take non-secondary-test cells
+        data_dict = {k: v for k, v in data_dict.items() if k.startswith('b3')}
+
+
     # Calculating max values for summary features
     for k in [cst.INTERNAL_RESISTANCE_NAME,
               cst.QD_NAME,
@@ -232,7 +240,7 @@ def calculate_and_save_scaling_factors(data_dict, train_test_split, csv_dir):
         # Two max() calls are needed, one for every cell, one over all cells
         scaling_factors[k] = max([max(cell_v["summary"][k])
                                   for cell_k, cell_v in data_dict.items()
-                                  if cell_k in train_test_split["train"]])
+                                  for cycle_v in cell_v["cycles"].values()])
     
     # Calculating max values for detail features
     for k in [cst.QDLIN_NAME,
@@ -240,7 +248,6 @@ def calculate_and_save_scaling_factors(data_dict, train_test_split, csv_dir):
         # Two max() calls are needed, one over every cycle array, one over all cycles (all cells included)
         scaling_factors[k] = max([max(cycle_v[k])
                                   for cell_k, cell_v in data_dict.items()
-                                  if cell_k in train_test_split["train"]
                                   for cycle_v in cell_v["cycles"].values()])
     
     with open(csv_dir, 'w', newline='') as file:
