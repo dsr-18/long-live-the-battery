@@ -24,6 +24,7 @@ BASE_DIR = './'  # home directory
 TRAIN_SET = join(DATASETS_DIR, 'train', '*tfrecord')  # regexp files for the training set
 TEST_SET = join(DATASETS_DIR, 'test', '*tfrecord')  # regexp for the test set
 SECONDARY_TEST_SET = join(DATASETS_DIR, 'secondary_test', '*tfrecord')  # regexp for the secondary test set
+BIG_TRAIN_SET = join(DATASETS_DIR, 'train_big', '*tfrecord')  	 # regexp for the combined training set (train + 1st test sets)
 SCALING_FACTORS_DIR = join(DATASETS_DIR, 'scaling_factors.csv')  # location for scaling factors for tfrecords files
 DATA_DIR = 'data'
 

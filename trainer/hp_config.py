@@ -12,7 +12,7 @@ avoid hp.RealInterval and hp.IntInterval.
 """
 
 split_model_hparams = [
-   hp.HParam(cst.CONV_KERNEL, hp.Discrete([3, 13, 37])),
+   hp.HParam(cst.CONV_KERNEL, hp.Discrete([9, 27])),
    hp.HParam(cst.CONV_FILTERS, hp.Discrete([8, 32])),
    hp.HParam(cst.LSTM_NUM_UNITS, hp.Discrete([64, 128])),
    # hp.HParam(cst.DENSE_NUM_UNITS, hp.Discrete([32])),

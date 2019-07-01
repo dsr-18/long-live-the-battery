@@ -158,13 +158,15 @@ def train_and_evaluate(args, tboard_dir, hparams=None):
         checkpoint_callback = CustomCheckpoints(save_last_only=True,
                                                 log_dir=tboard_dir,
                                                 dataset_path=ds_val_path,
-                                                dataset_config=ds_config)
+                                                dataset_config=ds_config,
+                                                save_eval_plot=False)
     else:
         checkpoint_callback = CustomCheckpoints(save_best_only=True,
                                                 start_epoch=args.save_from,
                                                 log_dir=tboard_dir,
                                                 dataset_path=ds_val_path,
-                                                dataset_config=ds_config)
+                                                dataset_config=ds_config,
+                                                save_eval_plot=False)
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=tboard_dir,
                                        histogram_freq=0,

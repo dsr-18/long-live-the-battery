@@ -104,11 +104,12 @@ def create_keras_model(window_size, loss, hparams_config=None):
     hidden_dense2 = Dense(hparams[cst.DENSE_NUM_UNITS],
                           activation=hparams[cst.DENSE_ACTIVATION],
                           name='hidden_dense2',)(concat_all)
+    dropout_output = Dropout(rate=0.4, name='dropout_output')(hidden_dense2)
     
     # update keras context with custom activation object
     get_custom_objects().update({'clippy': Clippy(clipped_relu)})
     
-    main_output = Dense(2, name='output', activation='clippy')(hidden_dense2)
+    main_output = Dense(2, name='output', activation='clippy')(dropout_output)
 
     # # Splitting neurons into two parts for the two outputs
     # split_cc, split_rc = tf.split(hidden_dense2, num_or_size_splits=2, axis=-1)
