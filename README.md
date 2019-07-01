@@ -18,7 +18,7 @@ and install dependencies.
 pip install -r requirements.txt
 ```
 
-You can download the processed dataset [here[INSERT LINK]](#) and jump to *Train Model*. If you want to reproduce the data preprocessing step, go ahead with *Generate Local Data*.
+You can download the processed dataset [here](https://github.com/dsr-18/long-live-the-battery-dataset) and jump to *Train Model*. If you want to reproduce the data preprocessing step, go ahead with *Generate Local Data*.
 
 
 ## Generate Local Data
