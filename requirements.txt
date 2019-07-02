@@ -1,0 +1,11 @@
+tensorflow>=2.0.0-beta
+tensorboard
+sklearn
+plotly>=3.10.0
+google-cloud-storage>=1.16.1
+numpy>=1.16
+pandas>=0.24
+h5py>=2.9.0
+scipy>=1.2.1
+jupyter>=1.0.0
+flask>=1.0.3
