@@ -11,13 +11,14 @@ from flask import Flask, render_template, request
 from plot import plot_single_prediction
 from constants import NUM_SAMPLES, MODEL_DIR, SAMPLES_DIR
 from clippy import Clippy, clipped_relu
+from metrics import mae_remaining_cycles, mae_current_cycle
 
 app = Flask(__name__)
 
 
 def load_model():
     global model  # bc YOLO
-    model = tf.keras.experimental.load_from_saved_model(MODEL_DIR, custom_objects={'clippy': Clippy(clipped_relu)})
+    model = tf.keras.experimental.load_from_saved_model(MODEL_DIR, custom_objects={'clippy': Clippy(clipped_relu),'mae_current_cycle':mae_current_cycle, 'mae_remaining_cycles':mae_remaining_cycles})
 
 
 def make_prediction(cycle_data, response):
